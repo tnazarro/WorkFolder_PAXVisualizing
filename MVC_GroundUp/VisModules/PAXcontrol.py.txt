@@ -1,0 +1,41 @@
+from model import PAXModel
+from view import PAXView
+import tkinter as tk
+from tkinter import filedialog
+
+class PAXController:
+	
+    def __init__(self, root):
+        self.model = PAXModel()
+        self.view = PAXView(root)
+        self.view.load_file_button.config(command=self.load_file)
+        self.view.listbox.bind('<<ListboxSelect>>', self.plot_data)
+
+    def load_file(self):
+        file_type = self.view.selected.get()
+        file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("Comma Separated", "*.csv"), ("PAX Data", "*.xlsx")))
+        if file_path:
+            self.model.load_file(file_path, file_type)
+            self.update_listbox()
+
+    def update_listbox(self):
+        self.view.listbox.delete(0, 'end')
+        for i, column in enumerate(self.model.df.columns):
+            if column not in ['Alarm', 'time']:
+                self.view.listbox.insert(i, column)
+                if i % 2 == 0:
+                    self.view.listbox.itemconfigure(i, background='#f0f0f0')
+
+    def plot_data(self, event):
+        selection = self.view.listbox.curselection()
+        if selection:
+            x_column = 'time'
+            y_column = self.model.df.columns[selection[0]]
+            self.view.plot(self.model.df, x_column, y_column)
+
+	if __name__ == "__main__":
+	    root = tk.Tk()
+	    app = PAXController(root)
+	    root.mainloop()
+
+
