@@ -37,9 +37,11 @@ class PAXView:
         self.frame_MC = tk.Frame(root)
         self.frame_MC.grid(row=2, column=2)
 
+        #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
         self.frame_MR = tk.Frame(root)
         self.frame_MR.grid(row=2, column=4)
 
+        #The bottom left (BL) frame for the quit and clear buttons, and any other functional buttons
         self.frame_BL = tk.Frame(root)
         self.button_quit = tk.Button(self.frame_BL, text="Quit", command=self.quit_app, bg='#FF2222')
         self.button_clear = tk.Button(self.frame_BL, text="Clear Selection", bg='light green')
@@ -49,6 +51,7 @@ class PAXView:
         self.button_clear.grid(row=0, column=0)
         self.testTextButton.grid(row=1, column=0)
 
+        #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
         self.listbox = tk.Listbox(self.list_frame, selectmode='multiple',height=30, width=30)
         self.scrollbar = tk.Scrollbar(self.list_frame, orient="vertical")
@@ -76,3 +79,33 @@ class PAXView:
         toolbar.grid(row=1, column=0)
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.AutoDateLocator()))
 
+#Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
+class CollapsibleFrame(ttk.Frame):
+    def __init__(self, parent, title="", *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        self.title_frame = ttk.Frame(self)
+        self.title_frame.pack(fill="x", expand=1)
+
+        self.title_label = ttk.Label(self.title_frame, text=title)
+        self.title_label.pack(side="left", fill="x", expand=1)
+
+        self.toggle_button = ttk.Button(self.title_frame, text="▼", width=2, command=self.toggle)
+        self.toggle_button.pack(side="right")
+
+        self.sub_frame = ttk.Frame(self, relief="sunken", borderwidth=1)
+        self.sub_frame.pack(fill="x", expand=1)
+
+        self.is_collapsed = False
+
+    def toggle(self):
+        if self.is_collapsed:
+            self.sub_frame.pack(fill="x", expand=1)
+            self.toggle_button.config(text="▼")
+        else:
+            self.sub_frame.forget()
+            self.toggle_button.config(text="▲")
+        self.is_collapsed = not self.is_collapsed
+
+def update_label(label, value):
+    label.config(text=f"Slider Value: {value}")

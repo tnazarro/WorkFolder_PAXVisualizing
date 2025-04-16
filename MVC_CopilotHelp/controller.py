@@ -1,0 +1,51 @@
+"""Starting point for the MVC_CopilotHelp project. Contains all helper/utility functions and classes."""
+import os
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+def alarm_translate(user_alarm_string, alarm_names, write_to_log):
+	"""
+	Translates alarm codes and logs the corresponding messages.
+
+	Parameters:
+	- user_alarm_string: A string containing alarm codes ('r', 'y', 'g').
+	- alarm_names: A list of alarm names corresponding to the codes.
+	- write_to_log: A function to log messages.
+	"""
+	for index in range(len(user_alarm_string)):
+		match user_alarm_string[index]:
+			case 'r':
+				write_to_log(f'{alarm_names[index]:25} RED')
+			case 'y':
+				write_to_log(f'{alarm_names[index]:25} YELLOW')
+			case 'g':
+				pass
+
+def writeToLog(msg):
+    numlines = int(log.index('end - 1 line').split('.')[0])
+    log['state'] = 'normal'
+    if numlines == 24:
+        log.delete(1.0, 2.0)
+    if log.index('end-1c') != '1.0':
+        log.insert('end', '\n')
+    log.insert('end', msg)
+    log['state'] = 'disabled'
+
+import tkinter as tk
+from tkinter import messagebox
+
+def are_you_sure(window):
+	"""
+	Opens a message box to confirm window destruction.
+
+	Parameters:
+	- window: The Tkinter window to be destroyed.
+	"""
+	if messagebox.askyesno("Quit Dialog", "Are you sure you want to quit the app?"):
+		window.destroy()
