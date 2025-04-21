@@ -78,6 +78,9 @@ class PAXView:
         toolbar.update()
         toolbar.grid(row=1, column=0)
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.AutoDateLocator()))
+    
+    def mainloop(self):
+        self.root.mainloop()
 
 #Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
 class CollapsibleFrame(ttk.Frame):
