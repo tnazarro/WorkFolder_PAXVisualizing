@@ -6,9 +6,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import seaborn as sns
 import matplotlib.dates as mdates
+from PIL import ImageTk, Image
+import os
+import sys
 
 #This should import the constants from the constants.py file in the same directory
 from constants import *
+from data_processing import *
+from controller import resource_path
 
 #One class handles the main viewing window, and calls it root for reference; can be passed main application window
 class PAXView:
@@ -23,15 +28,29 @@ class PAXView:
 
         #Topleft (TL) frame for file loading and radio buttons
         self.frame_TL = tk.Frame(root)
-        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", width=30, bg='orange')
-        self.load_file_button.grid(row=0, column=0, columnspan=3)
         self.selected = tk.StringVar()
-        self.selected.set("V1")
+        self.selected.set("V2")
         self.radio_csv = tk.Radiobutton(self.frame_TL, text="Load default .csv", value="V1", variable=self.selected)
         self.radio_xlsx = tk.Radiobutton(self.frame_TL, text="Load default .xlsx", value="V2", variable=self.selected)
+        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected), width=30, bg='orange')
+        self.load_file_button.grid(row=0, column=0, columnspan=3)
         self.radio_csv.grid(row=1, column=0)
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
+
+        #TC
+        self.frame_TC = tk.Frame(root)
+        self.log = tk.Text(self.frame_TC, state='disabled', width=70, height=5, wrap='char')
+        self.log.grid(row=0, column=0)
+        self.frame_TC.grid(row=0, column=3)
+
+        #TR
+        self.frame_TR = tk.Frame(root)
+        self.myImgLogo = Image.open(resource_path(logo_name))
+        self.myImgLogo = ImageTk.PhotoImage(self.myImgLogo)
+        self.image_label = tk.Label(self.frame_TR, image=self.myImgLogo)
+        self.image_label.pack()
+        self.frame_TR.grid(row=0, column=5)
 
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)

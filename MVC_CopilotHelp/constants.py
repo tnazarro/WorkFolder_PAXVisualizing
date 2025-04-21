@@ -4,7 +4,7 @@ import os
 geometry_width_pct = 0.8
 geometry_height_pct = 0.8
 
-logo_name = "DropletLogoTemp.png"
+logo_name = "MVC_CopilotHelp\\assets\\DropletLogoTemp.png"
 
 col_index = 0
 

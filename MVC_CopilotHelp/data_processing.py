@@ -4,6 +4,8 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 
+import pandas as pd
+import numpy as np
 
 #This is to ignore a deprecated functionality warning
 warnings.filterwarnings("ignore", "use_inf_as_na")
@@ -13,21 +15,20 @@ def load_file(selected):
     """
     Loading default style PAX files. M0 files can technically be loaded, but functionality will be reduced.
     """
-    pb.start()
+    #pb.start()  # Start the progress bar (if implemented)
+	#pb.start()
     if selected.get() == "V1":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("Comma Separated", "*.csv"),))
     elif selected.get() == "V2":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("PAX Data", "*.xlsx"),))
     else:
         tk.messagebox.showinfo("File Selection Error", "This program does not currently support non xlsx or csv imports")
-        pb.stop()
+        #pb.stop()
         return None
-
-    pb.stop()
+	#pb.stop() is a placeholder for a progress bar stop function, if implemented
+    #pb.stop()
     return file_path
 
-import pandas as pd
-import numpy as np
 
 def clearNaN(df):
 	"""

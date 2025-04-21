@@ -1,13 +1,22 @@
 """Starting point for the MVC_CopilotHelp project. Contains all helper/utility functions and classes."""
 import os
+import sys
+
+from constants import *
 
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
+    # Join the base path with the relative path
+    absolute_path = os.path.join(base_path, relative_path)
 
-    return os.path.join(base_path, relative_path)
+    # Ensure the path exists
+    if not os.path.exists(absolute_path):
+        raise FileNotFoundError(f"Resource not found: {absolute_path}")
+
+    return absolute_path
 
 def alarm_translate(user_alarm_string, alarm_names, write_to_log):
 	"""
@@ -27,7 +36,7 @@ def alarm_translate(user_alarm_string, alarm_names, write_to_log):
 			case 'g':
 				pass
 
-def writeToLog(msg):
+def writeToLog(msg, log):
     numlines = int(log.index('end - 1 line').split('.')[0])
     log['state'] = 'normal'
     if numlines == 24:

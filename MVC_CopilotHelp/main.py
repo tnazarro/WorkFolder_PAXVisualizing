@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 import seaborn as sns
 import matplotlib.dates as mdates
 
-
+#Imports the other modules in the same directory
 from controller import *
 from gui import *
 from constants import *
