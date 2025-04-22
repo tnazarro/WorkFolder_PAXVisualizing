@@ -1,13 +1,17 @@
 import csv
 import os
 
+# Constants for the GUI layout and configuration
 geometry_width_pct = 0.8
 geometry_height_pct = 0.8
 
+#Location of the logo image
 logo_name = "MVC_CopilotHelp\\assets\\DropletLogoTemp.png"
 
+#starting column index (if implemented)
 col_index = 0
 
+#Column names for the PAX alarm data
 alarm_names = [
     "Bscat (1/Mm)",
     "scat_raw",

@@ -37,7 +37,7 @@ def clearNaN(df):
 	df.replace([np.inf, -np.inf], np.nan, inplace=True)
 	df.bfill(inplace=True)
 
-def pax_analyzer(file_path, selected, listbox):
+def pax_analyzer(file_path, selected, listbox, df):
 	"""
 	Creating the pd df frames from files, cleaning/prepping the df.
 	Of note, recently changed the global "data" to "df" to prevent namespace overlap.

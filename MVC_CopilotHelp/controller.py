@@ -36,6 +36,7 @@ def alarm_translate(user_alarm_string, alarm_names, write_to_log):
 			case 'g':
 				pass
 
+
 def writeToLog(msg, log):
     numlines = int(log.index('end - 1 line').split('.')[0])
     log['state'] = 'normal'

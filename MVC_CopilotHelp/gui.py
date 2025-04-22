@@ -10,7 +10,7 @@ from PIL import ImageTk, Image
 import os
 import sys
 
-#This should import the constants from the constants.py file in the same directory
+#This should import the constants from the constants.py file in the same directory, and anything else needed
 from constants import *
 from data_processing import *
 from controller import resource_path
