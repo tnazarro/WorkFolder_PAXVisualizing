@@ -13,7 +13,7 @@ import sys
 #This should import the constants from the constants.py file in the same directory, and anything else needed
 from constants import *
 from data_processing import *
-from controller import resource_path
+from controller import resource_path, alarm_translate
 
 #One class handles the main viewing window, and calls it root for reference; can be passed main application window
 class PAXView:
@@ -38,8 +38,8 @@ class PAXView:
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
         #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
-
-
+        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.selected.get(), self.listbox), bg='light blue')
+        self.analyze_button.grid(row=2, column=0, columnspan=3)
 
         #TC
         self.frame_TC = tk.Frame(root)
@@ -57,16 +57,115 @@ class PAXView:
 
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)
-        self.frame_MC.grid(row=2, column=2)
+        self.frame_MC.grid(row=2, column=3)
         #TODO: Edit to make a more advanced plot with multiple axes, and a more advanced toolbar
 
         #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
-        self.frame_MR = tk.Frame(root)
-        self.frame_MR.grid(row=2, column=4)
+        self.container_MR = CollapsibleFrame(root, title="Calibration Options")
+        self.container_MR.grid(row=2, column=5)
         #TODO: Add the collapsible frame for the calibration options
-        self.collapsible_frame = CollapsibleFrame(self.frame_MR, title="Calibration Options")
+        self.frame_MR = ttk.Labelframe(self.container_MR.sub_frame, text='Important Numbers and Calibration Settings:')
+        self.frame_MR.grid(row=0, column=0, sticky="nsew")  # Ensure it is gridded into the sub_frame
 
-        
+        self.sMR = ttk.Separator(self.frame_MR, orient='vertical').grid(column=1,rowspan=9,sticky="ns")
+
+        #Large section below to set up the calibration range selection, and the sliders for the I0 selection
+        self.calibvar = tk.StringVar()
+        self.calibration_select = ttk.Combobox(self.frame_MR, textvariable=self.calibvar)
+        self.calibration_select['values'] = ('Scattering','Absorbing','Neither')
+        self.calibration_select.grid(row = 0, column = 0)
+
+        self.label_min = ttk.Label(self.frame_MR, text = "Min:")
+        self.label_min.grid(row = 1, column = 0)
+        self.label_max = ttk.Label(self.frame_MR, text = "Max:")
+        self.label_max.grid(row = 2, column = 0)
+        self.label_percent = ttk.Label(self.frame_MR, text = "Pct change:")
+        self.label_percent.grid(row = 3, column = 0)      
+
+        self.entry_min = tk.Entry(self.frame_MR, width = 20)
+        self.entry_min.grid(row = 1, column = 2)
+        self.entry_max = tk.Entry(self.frame_MR, width = 20)
+        self.entry_max.grid(row = 2, column = 2)
+        self.entry_percent = tk.Entry(self.frame_MR, width = 20)
+        self.entry_percent.grid(row = 3, column = 2)
+
+        self.calibStarter = tk.Button(self.frame_MR, 
+             text = "Generate calibration frame", 
+             command = lambda: print("calibStarter"), bg = 'light blue')
+        self.calibStarter.grid(row = 4, column = 2)
+
+
+        #Beginning of I0 slider logic
+        self.label_spanI0 = tk.Label(self.frame_MR, text = "I0 selection:")
+        self.label_spanI0.grid(row = 5, column = 0)
+
+        self.current_valueI0Low = tk.DoubleVar()
+        self.slider_I0Low = ttk.Scale(
+            self.frame_MR,
+            from_=0,
+            to=1000,
+            orient='horizontal',
+            variable=self.current_valueI0Low,
+            command=lambda event: slider_changed1(event, self.df, self.current_value1, self.label_slider1, self.plot_callback)
+        )
+        self.slider_I0Low.grid(row=6, column=0)
+
+        self.current_valueI0High = tk.DoubleVar()
+        self.slider_I0High = ttk.Scale(
+            self.frame_MR,
+            from_=0,
+            to=1000,
+            orient='horizontal',
+            variable=self.current_valueI0High,
+            command=lambda event: slider_changed2(event, self.df, self.current_value2, self.label_slider2, self.plot_callback)
+        )
+        self.slider_I0High.grid(row=7, column=0)
+
+        self.label_sliderI0Low = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueI0Low.get()), fg = 'green')
+        self.label_sliderI0Low.grid(row = 6, column = 2)
+        self.label_sliderI0High = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueI0High.get()), fg = 'green')
+        self.label_sliderI0High.grid(row = 7, column = 2)
+
+        self.label_spanCalib = tk.Label(self.frame_MR, text = "Calib. Region:")
+        self.label_spanCalib.grid(row = 8, column = 0)
+
+        self.current_valueCalibLow = tk.DoubleVar()
+        self.slider_CalibLow = ttk.Scale(
+            self.frame_MR,
+            from_=0,
+            to=1000,
+            orient='horizontal',
+            variable=self.current_valueCalibLow,
+            command=lambda event: slider_changedA(event, self.df, self.current_valueA, self.label_sliderA, self.plot_callback)
+        )
+        self.slider_CalibLow.grid(row=9, column=0)
+
+        self.current_valueCalibHigh = tk.DoubleVar()
+        self.slider_CalibHigh = ttk.Scale(
+            self.frame_MR,
+            from_=0,
+            to=1000,
+            orient='horizontal',
+            variable=self.current_valueCalibHigh,
+            command=lambda event: slider_changedB(event, self.df, self.current_valueB, self.label_sliderB, self.plot_callback)
+        )
+        self.slider_CalibHigh.grid(row=10, column=0)
+
+        self.label_sliderCalibLow = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueCalibLow.get()), fg = 'green')
+        self.label_sliderCalibLow.grid(row = 9, column = 2)
+        self.label_sliderCalibHigh = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueCalibHigh.get()), fg = 'green')
+        self.label_sliderCalibHigh.grid(row = 10, column = 2)
+
+
+        self.alarmTextbox = ttk.Entry(self.frame_MR)
+        self.alarmTextbox.grid(row = 12, column = 0)
+
+        self.translateButton = tk.Button(self.frame_MR, 
+             text = "Translate Alarm", 
+             command = lambda: alarm_translate(self.alarmTextbox.get(), alarm_names, self.log), bg = 'light blue')
+        self.translateButton.grid(row = 12, column = 2)
+
+
 
         #The bottom left (BL) frame for the quit and clear buttons, and any other functional buttons
         self.frame_BL = tk.Frame(root)

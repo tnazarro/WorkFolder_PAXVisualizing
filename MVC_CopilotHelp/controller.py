@@ -19,7 +19,7 @@ def resource_path(relative_path):
 
     return absolute_path
 
-def alarm_translate(user_alarm_string, alarm_names, write_to_log):
+def alarm_translate(user_alarm_string, alarm_names, log):
 	"""
 	Translates alarm codes and logs the corresponding messages.
 
@@ -31,9 +31,9 @@ def alarm_translate(user_alarm_string, alarm_names, write_to_log):
 	for index in range(len(user_alarm_string)):
 		match user_alarm_string[index]:
 			case 'r':
-				write_to_log(f'{alarm_names[index]:25} RED')
+				writeToLog(f'{alarm_names[index]:25} RED', log)
 			case 'y':
-				write_to_log(f'{alarm_names[index]:25} YELLOW')
+				writeToLog(f'{alarm_names[index]:25} YELLOW', log)
 			case 'g':
 				pass
 

@@ -3,6 +3,7 @@ Pax Analyzer 2.0
 ====================
 
 (Current To-Do list/explanation): Breaking down script into mvc modules
+(In more detail): Once MVC modules are set up, moving on to feature additions including: version tracking, report generation, file concatenation, and gui improvements
 
 
 Description
@@ -25,9 +26,9 @@ Upcoming Features
 
 * Arbitrary number of simultaneous plots
 * I0 selection for calibration
-* Alpha filtering optional view
+* Alpha filtering optional view (deprecated)
 * Software versioning using PAX.txt input
-* Filter out flush/zero information automatically/toggleable
+* Filter out flush/zero information automatically/toggleable (done automatically now, toggleable later)
 * Concatenate multiple files 
 * Generate clean calibration report summaries
 * Sig figs in r^2 summary
