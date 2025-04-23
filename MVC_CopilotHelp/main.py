@@ -26,5 +26,6 @@ def main():
     app = PAXView(root)  # Instantiate the PAXView class
     app.mainloop()  # Start the Tkinter main loop
 
+#If this file is run as a script, call the main function
 if __name__ == "__main__":
     main()

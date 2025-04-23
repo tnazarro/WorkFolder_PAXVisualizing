@@ -4,6 +4,7 @@ import sys
 
 from constants import *
 
+# This function is used to get the absolute path of a resource file.
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS

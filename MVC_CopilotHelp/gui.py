@@ -37,6 +37,9 @@ class PAXView:
         self.radio_csv.grid(row=1, column=0)
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
+        #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
+
+
 
         #TC
         self.frame_TC = tk.Frame(root)
@@ -55,10 +58,15 @@ class PAXView:
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)
         self.frame_MC.grid(row=2, column=2)
+        #TODO: Edit to make a more advanced plot with multiple axes, and a more advanced toolbar
 
         #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
         self.frame_MR = tk.Frame(root)
         self.frame_MR.grid(row=2, column=4)
+        #TODO: Add the collapsible frame for the calibration options
+        self.collapsible_frame = CollapsibleFrame(self.frame_MR, title="Calibration Options")
+
+        
 
         #The bottom left (BL) frame for the quit and clear buttons, and any other functional buttons
         self.frame_BL = tk.Frame(root)
@@ -69,6 +77,8 @@ class PAXView:
         self.button_quit.grid(row=2, column=0)
         self.button_clear.grid(row=0, column=0)
         self.testTextButton.grid(row=1, column=0)
+
+        #TODO: Add a BM section that calls the big 5 and 4x plots
 
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
