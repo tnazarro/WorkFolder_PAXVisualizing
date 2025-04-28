@@ -65,3 +65,5 @@ alarm_names = [
     "Reserved",
     "USB Status",
 ] 
+
+#Not too much to set up as initial values, but this constants file is a good place to put them

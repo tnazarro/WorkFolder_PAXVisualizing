@@ -21,6 +21,21 @@ def create_axes(figure, position=(1, 1, 1)):
     """
     return figure.add_subplot(*position)
 
+#make figure as its own element
+class FigureCreate:
+    def __init__(self, figsize=(8, 6)):
+        self.fig = plt.figure(figsize=figsize)
+    
+    def get_figure(self):
+        return self.fig
+
+class AxesCreate:
+    def __init__(self, figure, position=(1, 1, 1)):
+        self.ax = figure.add_subplot(*position)
+    
+    def get_axes(self):
+        return self.ax
+
 def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     """
     Plot the selected data on the provided axes.

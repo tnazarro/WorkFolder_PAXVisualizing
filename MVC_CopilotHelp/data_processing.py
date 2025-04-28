@@ -11,7 +11,7 @@ import numpy as np
 warnings.filterwarnings("ignore", "use_inf_as_na")
 
 #load file - the default for PAX happens to be CSV
-def load_file(selected):
+def load_file(selected, file_to_set):
     """
     Loading default style PAX files. M0 files can technically be loaded, but functionality will be reduced.
     """
@@ -27,7 +27,7 @@ def load_file(selected):
         return None
 	#pb.stop() is a placeholder for a progress bar stop function, if implemented
     #pb.stop()
-    return file_path
+    file_to_set.set(file_path)  # Set the file path in the GUI
 
 
 def clearNaN(df):
@@ -37,7 +37,7 @@ def clearNaN(df):
 	df.replace([np.inf, -np.inf], np.nan, inplace=True)
 	df.bfill(inplace=True)
 
-def pax_analyzer(file_path, selected, listbox):
+def pax_analyzer(file_path, selected, listbox, df_to_set):
 	"""
 	Creating the pd df frames from files, cleaning/prepping the df.
 	Of note, recently changed the global "data" to "df" to prevent namespace overlap.
@@ -76,4 +76,5 @@ def pax_analyzer(file_path, selected, listbox):
 				listbox.itemconfigure(i, background='#f0f0f0')
 			i += 1
 
-	return df
+	df_to_set.columns = df.columns  # Set the DataFrame in the GUI
+	df_to_set[:] = df.values

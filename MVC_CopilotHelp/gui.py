@@ -14,6 +14,7 @@ import sys
 from constants import *
 from data_processing import *
 from controller import resource_path, alarm_translate
+from plotting import *
 
 #One class handles the main viewing window, and calls it root for reference; can be passed main application window
 class PAXView:
@@ -30,15 +31,18 @@ class PAXView:
         self.frame_TL = tk.Frame(root)
         self.selected = tk.StringVar()
         self.selected.set("V2")
+        self.file_path = tk.StringVar()
+        self.file_path.set("")
         self.radio_csv = tk.Radiobutton(self.frame_TL, text="Load default .csv", value="V1", variable=self.selected)
         self.radio_xlsx = tk.Radiobutton(self.frame_TL, text="Load default .xlsx", value="V2", variable=self.selected)
-        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected), width=30, bg='orange')
+        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected, self.file_path), width=30, bg='orange')
         self.load_file_button.grid(row=0, column=0, columnspan=3)
         self.radio_csv.grid(row=1, column=0)
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
+        self.df = pd.DataFrame()  # Initialize df to empty DataFrame
         #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
-        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.selected.get(), self.listbox), bg='light blue')
+        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self.df), bg='light blue')
         self.analyze_button.grid(row=2, column=0, columnspan=3)
 
         #TC
@@ -58,6 +62,9 @@ class PAXView:
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)
         self.frame_MC.grid(row=2, column=3)
+        self.main_plot = FigureCreate()
+        self.main_axes = AxesCreate(self.main_plot.get_figure())
+        self.ax = self.main_axes.get_axes()
         #TODO: Edit to make a more advanced plot with multiple axes, and a more advanced toolbar
 
         #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
@@ -75,6 +82,7 @@ class PAXView:
         self.calibration_select['values'] = ('Scattering','Absorbing','Neither')
         self.calibration_select.grid(row = 0, column = 0)
 
+        #Min, max, and percent change entry boxes for the calibration region
         self.label_min = ttk.Label(self.frame_MR, text = "Min:")
         self.label_min.grid(row = 1, column = 0)
         self.label_max = ttk.Label(self.frame_MR, text = "Max:")
@@ -82,6 +90,7 @@ class PAXView:
         self.label_percent = ttk.Label(self.frame_MR, text = "Pct change:")
         self.label_percent.grid(row = 3, column = 0)      
 
+        #Labels for the min, max, and percent change entry boxes
         self.entry_min = tk.Entry(self.frame_MR, width = 20)
         self.entry_min.grid(row = 1, column = 2)
         self.entry_max = tk.Entry(self.frame_MR, width = 20)
@@ -89,6 +98,7 @@ class PAXView:
         self.entry_percent = tk.Entry(self.frame_MR, width = 20)
         self.entry_percent.grid(row = 3, column = 2)
 
+        #Main button to generate the calibration frame; this will call the function to generate the calibration frame
         self.calibStarter = tk.Button(self.frame_MR, 
              text = "Generate calibration frame", 
              command = lambda: print("calibStarter"), bg = 'light blue')
@@ -99,6 +109,7 @@ class PAXView:
         self.label_spanI0 = tk.Label(self.frame_MR, text = "I0 selection:")
         self.label_spanI0.grid(row = 5, column = 0)
 
+        #Setting up the I0 sliders; these will be used to select the range of I0 values for the calibration region
         self.current_valueI0Low = tk.DoubleVar()
         self.slider_I0Low = ttk.Scale(
             self.frame_MR,
@@ -126,6 +137,8 @@ class PAXView:
         self.label_sliderI0High = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueI0High.get()), fg = 'green')
         self.label_sliderI0High.grid(row = 7, column = 2)
 
+
+        #Repeating the above logic for the calibration region selection
         self.label_spanCalib = tk.Label(self.frame_MR, text = "Calib. Region:")
         self.label_spanCalib.grid(row = 8, column = 0)
 
@@ -170,7 +183,7 @@ class PAXView:
         #The bottom left (BL) frame for the quit and clear buttons, and any other functional buttons
         self.frame_BL = tk.Frame(root)
         self.button_quit = tk.Button(self.frame_BL, text="Quit", command=self.quit_app, bg='#FF2222')
-        self.button_clear = tk.Button(self.frame_BL, text="Clear Selection", bg='light green')
+        self.button_clear = tk.Button(self.frame_BL, text="Clear Selection", command = lambda: self.listbox.selection_clear(0,'end'), bg='light green')
         self.testTextButton = tk.Button(self.frame_BL, text="Display filename", width=15, bg='light yellow')
         self.frame_BL.grid(row=4, column=0)
         self.button_quit.grid(row=2, column=0)
@@ -182,6 +195,15 @@ class PAXView:
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
         self.listbox = tk.Listbox(self.list_frame, selectmode='multiple',height=30, width=30)
+        self.listbox.bind('<<ListboxSelect>>', lambda event: plot_data(
+            self.df, 
+            self.listbox.curselection(), 
+            self.main_axes.get_axes(), 
+            self.current_valueI0Low.get(), 
+            self.current_valueI0High.get(), 
+            self.current_valueCalibLow.get(), 
+            self.current_valueCalibHigh.get()
+        ) if not self.df.empty and self.listbox.curselection() else messagebox.showerror("Error", "No data to plot or no selection made"))
         self.scrollbar = tk.Scrollbar(self.list_frame, orient="vertical")
         self.listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.listbox.yview)
