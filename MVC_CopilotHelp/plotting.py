@@ -23,7 +23,7 @@ def create_axes(figure, position=(1, 1, 1)):
 
 #make figure as its own element
 class FigureCreate:
-    def __init__(self, figsize=(8, 6)):
+    def __init__(self, figsize=(5, 5)):
         self.fig = plt.figure(figsize=figsize)
     
     def get_figure(self):
@@ -40,6 +40,7 @@ def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     """
     Plot the selected data on the provided axes.
     """
+    ax.clear()
     for trace in selection:
         locator = mdates.AutoDateLocator()
         formatter = mdates.ConciseDateFormatter(locator)
@@ -55,6 +56,8 @@ def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     ax.axvline(df['time'][xlocA], color='#90EE90', linestyle=':')
     ax.axvline(df['time'][xlocB], color='#FF7276', linestyle=':')
     ax.axvspan(df['time'][xlocA], df['time'][xlocB], facecolor='gray', alpha=.25)
+
+
 
 def updateVLine(line, frame):
     line.set_xdata(frame)

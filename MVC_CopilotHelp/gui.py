@@ -40,9 +40,9 @@ class PAXView:
         self.radio_csv.grid(row=1, column=0)
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
-        self.df = pd.DataFrame()  # Initialize df to empty DataFrame
+        # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
         #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
-        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self.df), bg='light blue')
+        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox), bg='light blue')
         self.analyze_button.grid(row=2, column=0, columnspan=3)
 
         #TC
@@ -62,8 +62,12 @@ class PAXView:
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)
         self.frame_MC.grid(row=2, column=3)
+        # Embed the figure in a Tkinter frame
         self.main_plot = FigureCreate()
         self.main_axes = AxesCreate(self.main_plot.get_figure())
+        self.canvas = FigureCanvasTkAgg(self.main_plot.get_figure(), master=self.frame_MC)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
         self.ax = self.main_axes.get_axes()
         #TODO: Edit to make a more advanced plot with multiple axes, and a more advanced toolbar
 
@@ -195,15 +199,15 @@ class PAXView:
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
         self.listbox = tk.Listbox(self.list_frame, selectmode='multiple',height=30, width=30)
-        self.listbox.bind('<<ListboxSelect>>', lambda event: plot_data(
-            self.df, 
+        self.listbox.bind('<<ListboxSelect>>', lambda _: (plot_data(
+            constants.df_main, 
             self.listbox.curselection(), 
             self.main_axes.get_axes(), 
             self.current_valueI0Low.get(), 
             self.current_valueI0High.get(), 
             self.current_valueCalibLow.get(), 
             self.current_valueCalibHigh.get()
-        ) if not self.df.empty and self.listbox.curselection() else messagebox.showerror("Error", "No data to plot or no selection made"))
+        ), self.canvas.draw()) if not constants.df_main.empty and self.listbox.curselection() else messagebox.showerror("Error", "No data to plot or no selection made"))
         self.scrollbar = tk.Scrollbar(self.list_frame, orient="vertical")
         self.listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.listbox.yview)

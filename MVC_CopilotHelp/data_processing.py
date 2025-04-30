@@ -7,6 +7,8 @@ from tkinter import ttk
 import pandas as pd
 import numpy as np
 
+import constants
+
 #This is to ignore a deprecated functionality warning
 warnings.filterwarnings("ignore", "use_inf_as_na")
 
@@ -37,7 +39,7 @@ def clearNaN(df):
 	df.replace([np.inf, -np.inf], np.nan, inplace=True)
 	df.bfill(inplace=True)
 
-def pax_analyzer(file_path, selected, listbox, df_to_set):
+def pax_analyzer(file_path, selected, listbox):
 	"""
 	Creating the pd df frames from files, cleaning/prepping the df.
 	Of note, recently changed the global "data" to "df" to prevent namespace overlap.
@@ -75,6 +77,9 @@ def pax_analyzer(file_path, selected, listbox, df_to_set):
 			if (i % 2) == 0:
 				listbox.itemconfigure(i, background='#f0f0f0')
 			i += 1
+	update_df_main(df)
+	print(constants.df_main)
 
-	df_to_set.columns = df.columns  # Set the DataFrame in the GUI
-	df_to_set[:] = df.values
+def update_df_main(new_value):
+	constants.df_main = new_value
+	
