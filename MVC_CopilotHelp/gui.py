@@ -42,8 +42,15 @@ class PAXView:
         self.frame_TL.grid(row=0, column=0)
         # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
         #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
-        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox), bg='light blue')
+        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox), bg='light green')
         self.analyze_button.grid(row=2, column=0, columnspan=3)
+        
+        self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
+        self.radio_version.grid(row=4, column=0)
+        self.add_version_button = tk.Button(self.frame_TL, text="Add Pax.txt", command=lambda: load_file(self.selected, self.file_path), bg='light blue')
+        self.add_version_button.grid(row=4, column=1, columnspan=1)
+        self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_data(self.file_path.get(), self.selected, self.listbox), bg='light blue')
+        self.concatenate_button.grid(row=3, column=0, columnspan=3)
 
         #TC
         self.frame_TC = tk.Frame(root)
@@ -74,7 +81,6 @@ class PAXView:
         #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
         self.container_MR = CollapsibleFrame(root, title="Calibration Options")
         self.container_MR.grid(row=2, column=5)
-        #TODO: Add the collapsible frame for the calibration options
         self.frame_MR = ttk.Labelframe(self.container_MR.sub_frame, text='Important Numbers and Calibration Settings:')
         self.frame_MR.grid(row=0, column=0, sticky="nsew")  # Ensure it is gridded into the sub_frame
 
@@ -121,8 +127,11 @@ class PAXView:
             to=1000,
             orient='horizontal',
             variable=self.current_valueI0Low,
+            #TODO: Add a command to the slider to update the label with the current value
             command=lambda event: slider_changed1(event, self.df, self.current_value1, self.label_slider1, self.plot_callback)
         )
+        #TODO: Add a command to the slider to update the label with the current value
+
         self.slider_I0Low.grid(row=6, column=0)
 
         self.current_valueI0High = tk.DoubleVar()
@@ -195,6 +204,14 @@ class PAXView:
         self.testTextButton.grid(row=1, column=0)
 
         #TODO: Add a BM section that calls the big 5 and 4x plots
+        #The bottom middle (BM) frame for the big 5 and 4x plots
+        self.frame_BM = tk.Frame(root)
+        self.button_big5 = tk.Button(self.frame_BM, text="Plot Big 5", command=lambda: plot_big5(constants.df_main, self.root), bg='light blue')
+        self.button_big5.grid(row=0, column=0)
+        self.frame_BM.grid(row=4, column=3)
+        self.button_4x = tk.Button(self.frame_BM, text="Plot 4x", command=lambda: plot_4x(constants.df_main, self.root), bg='light blue')
+        self.button_4x.grid(row=1, column=0)
+
 
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)

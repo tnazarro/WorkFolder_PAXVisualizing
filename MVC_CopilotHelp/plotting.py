@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from data_processing import *
 from constants import *
 
-def create_figure(figsize=(5, 5)):
+def create_figure(figsize=(6, 6)):
     """
     Create a matplotlib figure.
     """
@@ -23,7 +23,7 @@ def create_axes(figure, position=(1, 1, 1)):
 
 #make figure as its own element
 class FigureCreate:
-    def __init__(self, figsize=(5, 5)):
+    def __init__(self, figsize=(6, 6)):
         self.fig = plt.figure(figsize=figsize)
     
     def get_figure(self):

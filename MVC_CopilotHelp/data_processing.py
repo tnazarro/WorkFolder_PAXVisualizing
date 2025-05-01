@@ -19,6 +19,7 @@ def load_file(selected, file_to_set):
     """
     #pb.start()  # Start the progress bar (if implemented)
 	#pb.start()
+	# Get the file path based on the selected format
     if selected.get() == "V1":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("Comma Separated", "*.csv"),))
     elif selected.get() == "V2":
@@ -79,6 +80,17 @@ def pax_analyzer(file_path, selected, listbox):
 			i += 1
 	update_df_main(df)
 	print(constants.df_main)
+
+def concatenate_df(df, df_to_add):
+	"""
+	Concatenating the dataframes together. This is a placeholder for future functionality.
+	"""
+	if df.empty:
+		return df_to_add
+	elif df_to_add.empty:
+		return df
+	else:
+		return pd.concat([df, df_to_add], ignore_index=True)
 
 def update_df_main(new_value):
 	constants.df_main = new_value

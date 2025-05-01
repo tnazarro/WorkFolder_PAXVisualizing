@@ -3,8 +3,8 @@ import os
 import pandas as pd
 
 # Constants for the GUI layout and configuration
-geometry_width_pct = 0.8
-geometry_height_pct = 0.8
+geometry_width_pct = 0.9
+geometry_height_pct = 0.9
 
 #Location of the logo image
 logo_name = "MVC_CopilotHelp\\assets\\DropletLogoTemp.png"
@@ -13,8 +13,9 @@ logo_name = "MVC_CopilotHelp\\assets\\DropletLogoTemp.png"
 col_index = 0
 
 #Adding an easily accessible location for the dataframe to be saved to
-# Adding an easily accessible location for the dataframe to be saved to
 df_main = pd.DataFrame()
+#Adding a second dataframe for concatenation of dataframes
+df_to_add = pd.DataFrame()
 
 #Column names for the PAX alarm data
 alarm_names = [
