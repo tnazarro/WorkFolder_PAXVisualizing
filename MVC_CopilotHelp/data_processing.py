@@ -13,23 +13,23 @@ import constants
 warnings.filterwarnings("ignore", "use_inf_as_na")
 
 #load file - the default for PAX happens to be CSV
-def load_file(selected, file_to_set):
+def load_file(selected, file_to_set, pb):
     """
     Loading default style PAX files. M0 files can technically be loaded, but functionality will be reduced.
     """
-    #pb.start()  # Start the progress bar (if implemented)
-	#pb.start()
+    pb.start()
 	# Get the file path based on the selected format
     if selected.get() == "V1":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("Comma Separated", "*.csv"),))
     elif selected.get() == "V2":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("PAX Data", "*.xlsx"),))
+    elif selected.get() == "V3":
+        file_path = filedialog.askopenfilename(title="Choose supplementary PAX.txt", filetypes=(("Text File", "*.txt"),))
     else:
         tk.messagebox.showinfo("File Selection Error", "This program does not currently support non xlsx or csv imports")
         #pb.stop()
         return None
-	#pb.stop() is a placeholder for a progress bar stop function, if implemented
-    #pb.stop()
+    pb.stop()
     file_to_set.set(file_path)  # Set the file path in the GUI
 
 

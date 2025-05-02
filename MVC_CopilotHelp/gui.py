@@ -35,7 +35,7 @@ class PAXView:
         self.file_path.set("")
         self.radio_csv = tk.Radiobutton(self.frame_TL, text="Load default .csv", value="V1", variable=self.selected)
         self.radio_xlsx = tk.Radiobutton(self.frame_TL, text="Load default .xlsx", value="V2", variable=self.selected)
-        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected, self.file_path), width=30, bg='orange')
+        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected, self.file_path,self.pb), width=30, bg='orange')
         self.load_file_button.grid(row=0, column=0, columnspan=3)
         self.radio_csv.grid(row=1, column=0)
         self.radio_xlsx.grid(row=1, column=1)
@@ -212,6 +212,13 @@ class PAXView:
         self.button_4x = tk.Button(self.frame_BM, text="Plot 4x", command=lambda: plot_4x(constants.df_main, self.root), bg='light blue')
         self.button_4x.grid(row=1, column=0)
 
+        #The bottom right (BR) frame for the progress bar and version info
+        self.frame_BR = tk.Frame(root)
+        self.frame_BR.grid(row=4, column=5)
+        self.label_version = tk.Label(self.frame_BR, text="Version 0.1", fg='blue')
+        self.label_version.grid(row=1, column=0)
+        self.pb = ttk.Progressbar(self.frame_BR, orient="horizontal", length=200, mode="determinate")
+        self.pb.grid(row=0, column=0)
 
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
