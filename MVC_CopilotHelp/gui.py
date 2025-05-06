@@ -13,7 +13,7 @@ import sys
 #This should import the constants from the constants.py file in the same directory, and anything else needed
 from constants import *
 from data_processing import *
-from controller import resource_path, alarm_translate
+from controller import resource_path, alarm_translate, writeToLog
 from plotting import *
 
 #One class handles the main viewing window, and calls it root for reference; can be passed main application window
@@ -47,10 +47,14 @@ class PAXView:
         
         self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
         self.radio_version.grid(row=4, column=0)
-        self.add_version_button = tk.Button(self.frame_TL, text="Add Pax.txt", command=lambda: load_file(self.selected, self.file_path), bg='light blue')
+        self.add_version_button = tk.Button(self.frame_TL, text="Process Pax.txt", command=lambda: process_paxtxt(self.file_path.get(),self.version_var), bg='light blue')
         self.add_version_button.grid(row=4, column=1, columnspan=1)
-        self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_data(self.file_path.get(), self.selected, self.listbox), bg='light blue')
+        self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_df(self.file_path.get(), self.selected, self.listbox), bg='light blue')
         self.concatenate_button.grid(row=3, column=0, columnspan=3)
+        self.load_concatenated_button = tk.Button(self.frame_TL, text="Load Concatenated Data", command=lambda: simple_listbox_load(self.listbox), bg='light blue')
+        self.load_concatenated_button.grid(row=5, column=0, columnspan=3)
+        self.clear_df_button = tk.Button(self.frame_TL, text="Clear DataFrame", command=lambda: clear_df, bg='light blue')
+        self.clear_df_button.grid(row=6, column=0, columnspan=3)
 
         #TC
         self.frame_TC = tk.Frame(root)
@@ -197,7 +201,7 @@ class PAXView:
         self.frame_BL = tk.Frame(root)
         self.button_quit = tk.Button(self.frame_BL, text="Quit", command=self.quit_app, bg='#FF2222')
         self.button_clear = tk.Button(self.frame_BL, text="Clear Selection", command = lambda: self.listbox.selection_clear(0,'end'), bg='light green')
-        self.testTextButton = tk.Button(self.frame_BL, text="Display filename", width=15, bg='light yellow')
+        self.testTextButton = tk.Button(self.frame_BL, text="Display filename", command = lambda: writeToLog(self.file_path.get(),self.log), width=15, bg='light yellow')
         self.frame_BL.grid(row=4, column=0)
         self.button_quit.grid(row=2, column=0)
         self.button_clear.grid(row=0, column=0)
@@ -215,7 +219,10 @@ class PAXView:
         #The bottom right (BR) frame for the progress bar and version info
         self.frame_BR = tk.Frame(root)
         self.frame_BR.grid(row=4, column=5)
-        self.label_version = tk.Label(self.frame_BR, text="Version 0.1", fg='blue')
+        #TODO: Set up the version text to be a label that updates with the version of the program
+        self.version_var = tk.StringVar()
+        self.version_var.set("Version Unknown")
+        self.label_version = tk.Label(self.frame_BR, textvariable=self.version_var, fg='blue')
         self.label_version.grid(row=1, column=0)
         self.pb = ttk.Progressbar(self.frame_BR, orient="horizontal", length=200, mode="determinate")
         self.pb.grid(row=0, column=0)
