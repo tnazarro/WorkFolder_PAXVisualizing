@@ -37,7 +37,7 @@ def alarm_translate(user_alarm_string, alarm_names, log):
 			case 'g':
 				pass
 
-
+#Handles the writing to the log window, set up in the top-center of the GUI
 def writeToLog(msg, log):
     numlines = int(log.index('end - 1 line').split('.')[0])
     log['state'] = 'normal'

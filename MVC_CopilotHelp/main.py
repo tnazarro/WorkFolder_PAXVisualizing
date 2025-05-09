@@ -11,11 +11,11 @@ import seaborn as sns
 import matplotlib.dates as mdates
 
 #Imports the other modules in the same directory
-from controller import *
-from gui import *
-from constants import *
-from plotting import *
-from data_processing import *
+from controller import * #provides utility functions for common tasks
+from gui import * #The central hub that interfaces with the user
+from constants import * #Constants and global variables
+from plotting import * #functions that handle visualization
+from data_processing import * #functions that handle file loading and data frame manipulation
 
 def main():
     """

@@ -57,6 +57,22 @@ def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     ax.axvline(df['time'][xlocB], color='#FF7276', linestyle=':')
     ax.axvspan(df['time'][xlocA], df['time'][xlocB], facecolor='gray', alpha=.25)
 
+def slider_changed(event, df, selection, ax, xlocI0Low, xlocI0High, xlocCalibLow, xlocCaliHigh):
+	"""
+	Update the plot when the slider value changes.
+	"""
+	# xloc1 = int(event)
+	# xloc2 = int(event) + 1
+	# xlocA = int(event) + xlocI0low
+	# xlocB = int(event) + xlocI0high
+
+	ax.clear()
+	plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB)
+	
+	# Update the canvas
+	canvas.draw()
+     
+	#This block of code is a placeholder for the slider functionality
 
 
 def updateVLine(line, frame):
@@ -146,6 +162,7 @@ def plot_4x(df, parent_window):
 
 	# Create the figure
 	fig = Figure(figsize=(12, 8), dpi=100)
+     
 
 	# Add subplots
 	plot1 = fig.add_subplot(221)

@@ -20,6 +20,7 @@ from plotting import *
 class PAXView:
     def __init__(self, root):
         self.root = root
+        #TODO: Make the title a constant?
         self.root.title("PAX Data Visualizer - Plotting in TKinter")
         #Get the screen size and set the window size
         screen_width = root.winfo_screenwidth()
@@ -29,8 +30,8 @@ class PAXView:
 
         #Topleft (TL) frame for file loading and radio buttons
         self.frame_TL = tk.Frame(root)
-        self.selected = tk.StringVar()
-        self.selected.set("V2")
+        self.selected = tk.StringVar() #Variable to hold the selected file type
+        self.selected.set("V2") #Default to .xlsx
         self.file_path = tk.StringVar()
         self.file_path.set("")
         self.radio_csv = tk.Radiobutton(self.frame_TL, text="Load default .csv", value="V1", variable=self.selected)
@@ -41,12 +42,12 @@ class PAXView:
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
         # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
-        #TODO: Add a button to load a pax.txt file, and a radio button eventually to select what to merge
         self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox), bg='light green')
         self.analyze_button.grid(row=2, column=0, columnspan=3)
         
         self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
         self.radio_version.grid(row=4, column=0)
+        #Currently, the version handling is not very advanced, and the processing/concatenating functions are finicky. See readme for more details
         self.add_version_button = tk.Button(self.frame_TL, text="Process Pax.txt", command=lambda: process_paxtxt(self.file_path.get(),self.version_var), bg='light blue')
         self.add_version_button.grid(row=4, column=1, columnspan=1)
         self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_df(self.file_path.get(), self.selected, self.listbox), bg='light blue')
@@ -58,17 +59,20 @@ class PAXView:
 
         #TC
         self.frame_TC = tk.Frame(root)
+        #Creates a text box for the log window
         self.log = tk.Text(self.frame_TC, state='disabled', width=70, height=5, wrap='char')
         self.log.grid(row=0, column=0)
         self.frame_TC.grid(row=0, column=3)
 
         #TR
         self.frame_TR = tk.Frame(root)
+        #An optional logo image; an easy add or remove, but be careful to set the path correctly, especially if using pyinstaller
         self.myImgLogo = Image.open(resource_path(logo_name))
         self.myImgLogo = ImageTk.PhotoImage(self.myImgLogo)
         self.image_label = tk.Label(self.frame_TR, image=self.myImgLogo)
         self.image_label.pack()
         self.frame_TR.grid(row=0, column=5)
+
 
         #The middle center (MC) frame for the plot
         self.frame_MC = tk.Frame(root)
@@ -118,7 +122,7 @@ class PAXView:
              command = lambda: print("calibStarter"), bg = 'light blue')
         self.calibStarter.grid(row = 4, column = 2)
 
-
+        #TODO: Work on the section below 
         #Beginning of I0 slider logic
         self.label_spanI0 = tk.Label(self.frame_MR, text = "I0 selection:")
         self.label_spanI0.grid(row = 5, column = 0)
@@ -131,8 +135,21 @@ class PAXView:
             to=1000,
             orient='horizontal',
             variable=self.current_valueI0Low,
-            #TODO: Add a command to the slider to update the label with the current value
-            command=lambda event: slider_changed1(event, self.df, self.current_value1, self.label_slider1, self.plot_callback)
+            command=lambda event: slider_changed(
+            event, 
+            constants.df_main,  # Replace self.df with constants.df_main
+            self.current_valueI0Low,  # Replace self.current_value1 with self.current_valueI0Low
+            self.label_sliderI0Low,  # Replace self.label_slider1 with self.label_sliderI0Low
+            lambda: plot_data(  # Replace self.plot_callback with an inline lambda for plotting
+                constants.df_main, 
+                self.listbox.curselection(), 
+                self.main_axes.get_axes(), 
+                self.current_valueI0Low.get(), 
+                self.current_valueI0High.get(), 
+                self.current_valueCalibLow.get(), 
+                self.current_valueCalibHigh.get()
+            )
+            )
         )
         #TODO: Add a command to the slider to update the label with the current value
 
@@ -186,7 +203,7 @@ class PAXView:
         self.label_sliderCalibHigh = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueCalibHigh.get()), fg = 'green')
         self.label_sliderCalibHigh.grid(row = 10, column = 2)
 
-
+        #The text box for the alarm translation; this will be used to translate the alarm codes into the corresponding messages
         self.alarmTextbox = ttk.Entry(self.frame_MR)
         self.alarmTextbox.grid(row = 12, column = 0)
 
@@ -263,6 +280,7 @@ class PAXView:
         toolbar.update()
         toolbar.grid(row=1, column=0)
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.AutoDateLocator()))
+        #TODO: Figure out if this is needed, or if it is just a remnant of the old code
     
     def mainloop(self):
         self.root.mainloop()
