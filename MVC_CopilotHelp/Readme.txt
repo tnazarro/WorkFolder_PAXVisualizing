@@ -2,7 +2,7 @@
 Pax Analyzer 2.0
 ====================
 
-(Current To-Do list/explanation): Breaking down script into mvc modules
+(Current To-Do list/explanation): Refining module separation, improving plotting options/interface
 (In more detail): Once MVC modules are set up, moving on to feature additions including: version tracking, report generation, file concatenation, and gui improvements
 
 

@@ -52,6 +52,7 @@ def process_paxtxt(file_path, version_var_to_set):
 		version_var_to_set.set(version_var)  # Set the version variable in the GUI
 	else:
 		raise TypeError("version_var_to_set must be a tkinter.StringVar")
+	
 
 
 
@@ -121,7 +122,7 @@ def concatenate_df(file_path, selected, listbox):
 	# Combine date and time columns into a single datetime column
 	time = pd.to_datetime(df_to_add['Local Date'].astype(str) + ',' + df_to_add['Local Time'].astype(str), format='%Y-%m-%d,%H:%M:%S')
 
-	# Drop unnecessary columns
+	# Drop unnecessary columns; this is based on the assumption that columns are the same as v3.1.3 or more current code
 	df_to_add.drop(columns=[
 		'Sec UTC', 'DOY UTC', 'Year UTC', 'Sec Local', 'DOY Local', 'Year Local',
 		'Local Date', 'Local Time', 'Reserved.1', 'Reserved.2', 'Reserved.3',
@@ -155,8 +156,9 @@ def simple_listbox_load(listbox):
 			listbox.insert(i, column)
 			if (i % 2) == 0:
 				listbox.itemconfigure(i, background='#f0f0f0')
-			i += 1
+			i += 1 
 	print(constants.df_main)
+	
 
 def update_df_main(new_value):
 	constants.df_main = new_value

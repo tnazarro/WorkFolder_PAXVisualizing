@@ -56,6 +56,7 @@ def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     ax.axvline(df['time'][xlocA], color='#90EE90', linestyle=':')
     ax.axvline(df['time'][xlocB], color='#FF7276', linestyle=':')
     ax.axvspan(df['time'][xlocA], df['time'][xlocB], facecolor='gray', alpha=.25)
+    
 
 def slider_changed(event, df, selection, ax, xlocI0Low, xlocI0High, xlocCalibLow, xlocCaliHigh):
 	"""

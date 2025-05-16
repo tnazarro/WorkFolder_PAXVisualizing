@@ -25,7 +25,7 @@ class PAXView:
         #Get the screen size and set the window size
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
-        #This should set the window size to 80% of the screen size by default, but pull the pct from the constants file
+        #This should set the window size to ~80% of the screen size by default, but pull the pct from the constants file
         self.root.geometry(str(int(screen_width*geometry_width_pct))+"x"+str(int(screen_height*geometry_height_pct)))
 
         #Topleft (TL) frame for file loading and radio buttons
@@ -152,6 +152,16 @@ class PAXView:
             )
         )
         #TODO: Add a command to the slider to update the label with the current value
+        # self.slider_I0Low.bind("<Motion>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<Leave>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<Enter>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<ButtonRelease-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<ButtonRelease-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<ButtonRelease-2>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<Button-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        # self.slider_I0Low.bind("<Button-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        #TODO: Add a command to the slider to update the position on the slider on the graph
+        #self.slider_I0H
 
         self.slider_I0Low.grid(row=6, column=0)
 

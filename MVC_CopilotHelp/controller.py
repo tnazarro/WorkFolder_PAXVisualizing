@@ -1,6 +1,10 @@
 """Starting point for the MVC_CopilotHelp project. Contains all helper/utility functions and classes."""
 import os
 import sys
+import tkinter as tk
+from tkinter import messagebox
+
+
 
 from constants import *
 
@@ -47,9 +51,6 @@ def writeToLog(msg, log):
         log.insert('end', '\n')
     log.insert('end', msg)
     log['state'] = 'disabled'
-
-import tkinter as tk
-from tkinter import messagebox
 
 def are_you_sure(window):
 	"""
