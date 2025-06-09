@@ -58,28 +58,43 @@ def plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB):
     ax.axvspan(df['time'][xlocA], df['time'][xlocB], facecolor='gray', alpha=.25)
     
 
-def slider_changed(event, df, selection, ax, xlocI0Low, xlocI0High, xlocCalibLow, xlocCaliHigh):
-	"""
-	Update the plot when the slider value changes.
-	"""
-	# xloc1 = int(event)
-	# xloc2 = int(event) + 1
-	# xlocA = int(event) + xlocI0low
-	# xlocB = int(event) + xlocI0high
+def slider_changed(event, df, label_widget, plot_callback):
+    """
+    Generic slider change handler that updates labels and triggers plot updates.
+    """
+    if df.empty:
+        return
+    
+    # Convert slider value to valid DataFrame index
+    max_index = len(df) - 1
+    slider_value = float(event)
+    index = int(min(max(0, slider_value), max_index))
+    
+    # Update the label with current time value
+    try:
+        time_value = df['time'].iloc[index]
+        label_widget.config(text=f"Time: {time_value.strftime('%H:%M:%S')}")
+    except (IndexError, KeyError):
+        label_widget.config(text=f"Index: {index}")
+    
+    # Trigger plot update
+    plot_callback()
 
-	ax.clear()
-	plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB)
-     #Is there any reason to have slider_changed instead of just plot_data?
-
-	#Use this section to update the vertical lines based on the slider value
-     #call the plot_data function to update the plot with the new xloc values
-
-	# Update the canvas
-	canvas.draw()
-
-	
-
-	#This block of code is a placeholder for the slider functionality
+def update_slider_ranges(df, *sliders):
+    """
+    Update slider ranges based on DataFrame length.
+    
+    Parameters:
+    - df: The DataFrame containing the data
+    - *sliders: Variable number of slider widgets to update
+    """
+    if df.empty:
+        max_val = 1000  # Default fallback
+    else:
+        max_val = len(df) - 1
+    
+    for slider in sliders:
+        slider.config(to=max_val)
 
 
 def updateVLine(line, frame):

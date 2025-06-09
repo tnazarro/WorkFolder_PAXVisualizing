@@ -42,7 +42,9 @@ class PAXView:
         self.radio_xlsx.grid(row=1, column=1)
         self.frame_TL.grid(row=0, column=0)
         # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
-        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox), bg='light green')
+        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", 
+                                        command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self), 
+                                        bg='light green')
         self.analyze_button.grid(row=2, column=0, columnspan=3)
         
         self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
@@ -98,6 +100,7 @@ class PAXView:
         self.calibvar = tk.StringVar()
         self.calibration_select = ttk.Combobox(self.frame_MR, textvariable=self.calibvar)
         self.calibration_select['values'] = ('Scattering','Absorbing','Neither')
+        self.calibration_select.set('Scattering') # Set default value
         self.calibration_select.grid(row = 0, column = 0)
 
         #Min, max, and percent change entry boxes for the calibration region
@@ -123,114 +126,102 @@ class PAXView:
         self.calibStarter.grid(row = 4, column = 2)
 
         #TODO: Work on the section below 
-        #Beginning of I0 slider logic
-        self.label_spanI0 = tk.Label(self.frame_MR, text = "I0 selection:")
-        self.label_spanI0.grid(row = 5, column = 0)
+        # Beginning of I0 slider logic
+        self.label_spanI0 = tk.Label(self.frame_MR, text="I0 selection:")
+        self.label_spanI0.grid(row=5, column=0)
 
-        #Setting up the I0 sliders; these will be used to select the range of I0 values for the calibration region
+        # I0 Low Slider
         self.current_valueI0Low = tk.DoubleVar()
+        self.current_valueI0Low.set(0)  # Set initial value
+        
         self.slider_I0Low = ttk.Scale(
             self.frame_MR,
             from_=0,
-            to=1000,
+            to=1000,  # Will be updated when data is loaded
             orient='horizontal',
             variable=self.current_valueI0Low,
             command=lambda event: slider_changed(
-            event, 
-            constants.df_main,  # Replace self.df with constants.df_main
-            self.current_valueI0Low,  # Replace self.current_value1 with self.current_valueI0Low
-            self.label_sliderI0Low,  # Replace self.label_slider1 with self.label_sliderI0Low
-            lambda: plot_data(  # Replace self.plot_callback with an inline lambda for plotting
-                constants.df_main, 
-                self.listbox.curselection(), 
-                self.main_axes.get_axes(), 
-                self.current_valueI0Low.get(), 
-                self.current_valueI0High.get(), 
-                self.current_valueCalibLow.get(), 
-                self.current_valueCalibHigh.get()
-            )
+                event, 
+                constants.df_main,
+                self.label_sliderI0Low,
+                self.update_plot_from_sliders
             )
         )
-        
-        
-        #TODO: Add a command to the slider to update the label with the current value
-        # self.slider_I0Low.bind("<Motion>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<Leave>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<Enter>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        #Prioritize release as it is similar to PADs
-        # self.slider_I0Low.bind("<ButtonRelease-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<ButtonRelease-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<ButtonRelease-2>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<Button-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        # self.slider_I0Low.bind("<Button-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
-        #TODO: Add a command to the slider to update the position on the slider on the graph
-        
-        
-        
-
         self.slider_I0Low.grid(row=6, column=0)
 
+        # I0 High Slider
         self.current_valueI0High = tk.DoubleVar()
+        self.current_valueI0High.set(100)  # Set initial value
+        
         self.slider_I0High = ttk.Scale(
             self.frame_MR,
             from_=0,
-            to=1000,
+            to=1000,  # Will be updated when data is loaded
             orient='horizontal',
             variable=self.current_valueI0High,
             command=lambda event: slider_changed(
-            event, 
-            constants.df_main,  # Replace self.df with constants.df_main
-            self.current_valueI0Low,  # Replace self.current_value1 with self.current_valueI0Low
-            self.label_sliderI0Low,  # Replace self.label_slider1 with self.label_sliderI0Low
-            lambda: plot_data(  # Replace self.plot_callback with an inline lambda for plotting
-                constants.df_main, 
-                self.listbox.curselection(), 
-                self.main_axes.get_axes(), 
-                self.current_valueI0Low.get(), 
-                self.current_valueI0High.get(), 
-                self.current_valueCalibLow.get(), 
-                self.current_valueCalibHigh.get()
-            )
+                event, 
+                constants.df_main,
+                self.label_sliderI0High,
+                self.update_plot_from_sliders
             )
         )
         self.slider_I0High.grid(row=7, column=0)
 
-        self.label_sliderI0Low = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueI0Low.get()), fg = 'green')
-        self.label_sliderI0Low.grid(row = 6, column = 2)
-        self.label_sliderI0High = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueI0High.get()), fg = 'green')
-        self.label_sliderI0High.grid(row = 7, column = 2)
+        # I0 Slider Labels
+        self.label_sliderI0Low = tk.Label(self.frame_MR, text="I0 Low: Not set", fg='green')
+        self.label_sliderI0Low.grid(row=6, column=2)
+        self.label_sliderI0High = tk.Label(self.frame_MR, text="I0 High: Not set", fg='green')
+        self.label_sliderI0High.grid(row=7, column=2)
 
+        # Calibration region selection
+        self.label_spanCalib = tk.Label(self.frame_MR, text="Calib. Region:")
+        self.label_spanCalib.grid(row=8, column=0)
 
-        #Repeating the above logic for the calibration region selection
-        self.label_spanCalib = tk.Label(self.frame_MR, text = "Calib. Region:")
-        self.label_spanCalib.grid(row = 8, column = 0)
-
+        # Calibration Low Slider
         self.current_valueCalibLow = tk.DoubleVar()
+        self.current_valueCalibLow.set(200)  # Set initial value
+        
         self.slider_CalibLow = ttk.Scale(
             self.frame_MR,
             from_=0,
-            to=1000,
+            to=1000,  # Will be updated when data is loaded
             orient='horizontal',
             variable=self.current_valueCalibLow,
-            command=lambda event: slider_changedA(event, self.df, self.current_valueA, self.label_sliderA, self.plot_callback)
+            command=lambda event: slider_changed(
+                event, 
+                constants.df_main,
+                self.label_sliderCalibLow,
+                self.update_plot_from_sliders
+            )
         )
         self.slider_CalibLow.grid(row=9, column=0)
 
+        # Calibration High Slider
         self.current_valueCalibHigh = tk.DoubleVar()
+        self.current_valueCalibHigh.set(300)  # Set initial value
+        
         self.slider_CalibHigh = ttk.Scale(
             self.frame_MR,
             from_=0,
-            to=1000,
+            to=1000,  # Will be updated when data is loaded
             orient='horizontal',
             variable=self.current_valueCalibHigh,
-            command=lambda event: slider_changedB(event, self.df, self.current_valueB, self.label_sliderB, self.plot_callback)
+            command=lambda event: slider_changed(
+                event, 
+                constants.df_main,
+                self.label_sliderCalibHigh,
+                self.update_plot_from_sliders
+            )
         )
         self.slider_CalibHigh.grid(row=10, column=0)
 
-        self.label_sliderCalibLow = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueCalibLow.get()), fg = 'green')
-        self.label_sliderCalibLow.grid(row = 9, column = 2)
-        self.label_sliderCalibHigh = tk.Label(self.frame_MR, text = "Slider is at " + str(self.current_valueCalibHigh.get()), fg = 'green')
-        self.label_sliderCalibHigh.grid(row = 10, column = 2)
+        # Calibration Slider Labels
+        self.label_sliderCalibLow = tk.Label(self.frame_MR, text="Calib Low: Not set", fg='green')
+        self.label_sliderCalibLow.grid(row=9, column=2)
+        self.label_sliderCalibHigh = tk.Label(self.frame_MR, text="Calib High: Not set", fg='green')
+        self.label_sliderCalibHigh.grid(row=10, column=2)
+
 
         #The text box for the alarm translation; this will be used to translate the alarm codes into the corresponding messages
         self.alarmTextbox = ttk.Entry(self.frame_MR)
@@ -276,21 +267,25 @@ class PAXView:
         #The frame for the listbox of columns; this will be the left side of the window
         self.list_frame = tk.Frame(root)
         self.listbox = tk.Listbox(self.list_frame, selectmode='multiple',height=30, width=30)
-        self.listbox.bind('<<ListboxSelect>>', lambda _: (plot_data(
-            constants.df_main, 
-            self.listbox.curselection(), 
-            self.main_axes.get_axes(), 
-            self.current_valueI0Low.get(), 
-            self.current_valueI0High.get(), 
-            self.current_valueCalibLow.get(), 
-            self.current_valueCalibHigh.get()
-        ), self.canvas.draw()) if not constants.df_main.empty and self.listbox.curselection() else messagebox.showerror("Error", "No data to plot or no selection made"))
+        self.listbox.bind('<<ListboxSelect>>', self.on_listbox_select)
+
         self.scrollbar = tk.Scrollbar(self.list_frame, orient="vertical")
         self.listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.listbox.yview)
         self.list_frame.grid(row=2, column=0)
         self.listbox.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
+
+
+    def on_listbox_select(self, event):
+        """
+        Handle listbox selection changes.
+        """
+        if constants.df_main.empty or not self.listbox.curselection():
+            messagebox.showerror("Error", "No data to plot or no selection made")
+            return
+        
+        self.update_plot_from_sliders()
 
     def quit_app(self):
         if messagebox.askyesno("Quit Dialog", "Are you sure you want to quit the app?"):
@@ -313,6 +308,57 @@ class PAXView:
     
     def mainloop(self):
         self.root.mainloop()
+
+    def update_plot_from_sliders(self):
+        """
+        Update the plot based on current slider values and listbox selection.
+        """
+        if constants.df_main.empty or not self.listbox.curselection():
+            return
+        
+        # Get current slider values as indices
+        i0_low = int(self.current_valueI0Low.get())
+        i0_high = int(self.current_valueI0High.get())
+        calib_low = int(self.current_valueCalibLow.get())
+        calib_high = int(self.current_valueCalibHigh.get())
+        
+        # Call the plot_data function with current parameters
+        plot_data(
+            constants.df_main,
+            self.listbox.curselection(),
+            self.main_axes.get_axes(),
+            i0_low,
+            i0_high,
+            calib_low,
+            calib_high
+        )
+        
+        # Redraw the canvas
+        self.canvas.draw()
+
+    def update_slider_ranges_after_load(self):
+        """
+        Call this after loading data to update slider ranges.
+        """
+        if not constants.df_main.empty:
+            max_index = len(constants.df_main) - 1
+            
+            # Update all slider ranges
+            self.slider_I0Low.config(to=max_index)
+            self.slider_I0High.config(to=max_index)
+            self.slider_CalibLow.config(to=max_index)
+            self.slider_CalibHigh.config(to=max_index)
+            
+            # Set reasonable default values
+            quarter = max_index // 4
+            self.current_valueI0Low.set(quarter)
+            self.current_valueI0High.set(quarter * 2)
+            self.current_valueCalibLow.set(quarter * 2.5)
+            self.current_valueCalibHigh.set(quarter * 3)
+            
+            # Update labels immediately
+            self.update_plot_from_sliders()
+
 
 #Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
 class CollapsibleFrame(ttk.Frame):

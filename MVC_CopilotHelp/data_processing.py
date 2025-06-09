@@ -63,7 +63,7 @@ def clearNaN(df):
 	df.replace([np.inf, -np.inf], np.nan, inplace=True)
 	df.bfill(inplace=True)
 
-def pax_analyzer(file_path, selected, listbox):
+def pax_analyzer(file_path, selected, listbox, gui_instance=None):
 	"""
 	Creating the pd df frames from files, cleaning/prepping the df.
 	Of note, recently changed the global "data" to "df" to prevent namespace overlap.
@@ -103,6 +103,10 @@ def pax_analyzer(file_path, selected, listbox):
 			i += 1
 	update_df_main(df)
 	print(constants.df_main)
+	
+	# ADD THIS LINE to update slider ranges after loading data:
+	if gui_instance is not None:
+		gui_instance.update_slider_ranges_after_load()
 
 def concatenate_df(file_path, selected, listbox):
 	"""
