@@ -3,8 +3,8 @@ import os
 import pandas as pd
 
 # Constants for the GUI layout and configuration
-geometry_width_pct = 0.9
-geometry_height_pct = 0.9
+geometry_width_pct = 1.0
+geometry_height_pct = 1.0
 
 #Location of the logo image
 logo_name = "assets\\DropletLogoTemp.png"

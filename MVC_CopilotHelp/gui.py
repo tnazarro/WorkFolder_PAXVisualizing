@@ -56,7 +56,7 @@ class PAXView:
         self.concatenate_button.grid(row=3, column=0, columnspan=3)
         self.load_concatenated_button = tk.Button(self.frame_TL, text="Load Concatenated Data", command=lambda: simple_listbox_load(self.listbox), bg='light blue')
         self.load_concatenated_button.grid(row=5, column=0, columnspan=3)
-        self.clear_df_button = tk.Button(self.frame_TL, text="Clear DataFrame", command=lambda: clear_df, bg='light blue')
+        self.clear_df_button = tk.Button(self.frame_TL, text="Clear DataFrame", command=lambda: clear_df(), bg='light blue')
         self.clear_df_button.grid(row=6, column=0, columnspan=3)
 
         #TC
@@ -243,6 +243,22 @@ class PAXView:
         self.button_quit.grid(row=2, column=0)
         self.button_clear.grid(row=0, column=0)
         self.testTextButton.grid(row=1, column=0)
+        # Subplot toggle controls
+        self.subplot_mode = tk.BooleanVar()
+        self.subplot_mode.set(False)  # Default to single axis mode
+        
+        self.subplot_checkbox = tk.Checkbutton(
+            self.frame_BL, 
+            text="Use Subplots", 
+            variable=self.subplot_mode,
+            command=self.on_subplot_toggle
+        )
+        self.subplot_checkbox.grid(row=3, column=0, sticky='w')
+        
+        # Optional: Add a label to show current mode
+        self.plot_mode_label = tk.Label(self.frame_BL, text="Mode: Single Axis", fg='blue', font=('Arial', 8))
+        self.plot_mode_label.grid(row=4, column=0, sticky='w')
+
 
         #TODO: Add a BM section that calls the big 5 and 4x plots
         #The bottom middle (BM) frame for the big 5 and 4x plots
@@ -277,16 +293,6 @@ class PAXView:
         self.scrollbar.pack(side="right", fill="y")
 
 
-    def on_listbox_select(self, event):
-        """
-        Handle listbox selection changes.
-        """
-        if constants.df_main.empty or not self.listbox.curselection():
-            messagebox.showerror("Error", "No data to plot or no selection made")
-            return
-        
-        self.update_plot_from_sliders()
-
     def quit_app(self):
         if messagebox.askyesno("Quit Dialog", "Are you sure you want to quit the app?"):
                   self.root.destroy()
@@ -308,33 +314,6 @@ class PAXView:
     
     def mainloop(self):
         self.root.mainloop()
-
-    def update_plot_from_sliders(self):
-        """
-        Update the plot based on current slider values and listbox selection.
-        """
-        if constants.df_main.empty or not self.listbox.curselection():
-            return
-        
-        # Get current slider values as indices
-        i0_low = int(self.current_valueI0Low.get())
-        i0_high = int(self.current_valueI0High.get())
-        calib_low = int(self.current_valueCalibLow.get())
-        calib_high = int(self.current_valueCalibHigh.get())
-        
-        # Call the plot_data function with current parameters
-        plot_data(
-            constants.df_main,
-            self.listbox.curselection(),
-            self.main_axes.get_axes(),
-            i0_low,
-            i0_high,
-            calib_low,
-            calib_high
-        )
-        
-        # Redraw the canvas
-        self.canvas.draw()
 
     def update_slider_ranges_after_load(self):
         """
@@ -358,6 +337,66 @@ class PAXView:
             
             # Update labels immediately
             self.update_plot_from_sliders()
+
+    def on_subplot_toggle(self):
+        """
+        Handle subplot mode toggle.
+        """
+        if self.subplot_mode.get():
+            self.plot_mode_label.config(text="Mode: Subplots (max 4)")
+        else:
+            self.plot_mode_label.config(text="Mode: Single Axis")
+        
+        # Refresh the plot with new mode
+        self.update_plot_from_sliders()
+
+    def update_plot_from_sliders(self):
+        """
+        REPLACE your existing update_plot_from_sliders method with this enhanced version.
+        """
+        if constants.df_main.empty or not self.listbox.curselection():
+            return
+        
+        # Get current slider values as indices
+        i0_low = int(self.current_valueI0Low.get())
+        i0_high = int(self.current_valueI0High.get())
+        calib_low = int(self.current_valueCalibLow.get())
+        calib_high = int(self.current_valueCalibHigh.get())
+        
+        # Use the new subplot-aware plotting function
+        plot_data_subplots(
+            constants.df_main,
+            self.listbox.curselection(),
+            self.main_plot.get_figure(),
+            self.subplot_mode.get(),  # Pass the subplot mode
+            i0_low,
+            i0_high,
+            calib_low,
+            calib_high
+        )
+        
+        # Redraw the canvas
+        self.canvas.draw()
+
+    def on_listbox_select(self, event):
+        """
+        REPLACE your existing on_listbox_select method with this enhanced version.
+        """
+        if constants.df_main.empty or not self.listbox.curselection():
+            messagebox.showerror("Error", "No data to plot or no selection made")
+            return
+        
+        # Update the plot mode label based on selection count
+        selection_count = len(self.listbox.curselection())
+        if self.subplot_mode.get() and selection_count > 1:
+            shown_plots = min(selection_count, 4)
+            self.plot_mode_label.config(text=f"Mode: Subplots ({shown_plots} of {selection_count} shown)")
+        elif self.subplot_mode.get():
+            self.plot_mode_label.config(text="Mode: Single Plot")
+        else:
+            self.plot_mode_label.config(text=f"Mode: Single Axis ({selection_count} traces)")
+        
+        self.update_plot_from_sliders()
 
 
 #Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
@@ -390,3 +429,4 @@ class CollapsibleFrame(ttk.Frame):
 
 def update_label(label, value):
     label.config(text=f"Slider Value: {value}")
+

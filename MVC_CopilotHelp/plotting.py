@@ -101,10 +101,97 @@ def updateVLine(line, frame):
     line.set_xdata(frame)
     return line
 
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-
-import matplotlib.dates as mdates
+def plot_data_subplots(df, selection, fig, subplot_mode=False, xloc1=0, xloc2=100, xlocA=200, xlocB=300):
+    """
+    Plot the selected data either on one axis or multiple subplots.
+    
+    Parameters:
+    - df: DataFrame containing the data
+    - selection: List of selected column indices from listbox
+    - fig: The matplotlib figure object
+    - subplot_mode: Boolean - True for subplots, False for single axis
+    - xloc1, xloc2, xlocA, xlocB: Slider position indices
+    """
+    # Clear the entire figure
+    fig.clear()
+    
+    if not selection:
+        return
+    
+    if subplot_mode and len(selection) > 1:
+        # Multiple subplots mode
+        num_plots = min(len(selection), 4)  # Maximum 4 subplots
+        
+        # Determine subplot layout
+        if num_plots == 1:
+            rows, cols = 1, 1
+        elif num_plots == 2:
+            rows, cols = 2, 1
+        elif num_plots == 3:
+            rows, cols = 3, 1
+        else:  # 4 plots
+            rows, cols = 2, 2
+        
+        # Create subplots
+        for i, trace in enumerate(selection[:4]):  # Limit to 4 subplots
+            ax = fig.add_subplot(rows, cols, i + 1)
+            
+            # Plot the data
+            sns.lineplot(data=df, x='time', y=df.columns[trace], ax=ax)
+            
+            # Add vertical lines and spans
+            try:
+                ax.axvline(df['time'].iloc[xloc1], color='green', linestyle='--', alpha=0.7)
+                ax.axvline(df['time'].iloc[xloc2], color='red', linestyle='--', alpha=0.7)
+                ax.axvspan(df['time'].iloc[xloc1], df['time'].iloc[xloc2], facecolor='gray', alpha=0.15)
+                ax.axvline(df['time'].iloc[xlocA], color='#90EE90', linestyle=':', alpha=0.7)
+                ax.axvline(df['time'].iloc[xlocB], color='#FF7276', linestyle=':', alpha=0.7)
+                ax.axvspan(df['time'].iloc[xlocA], df['time'].iloc[xlocB], facecolor='blue', alpha=0.1)
+            except IndexError:
+                pass  # Skip if indices are out of range
+            
+            # Format the subplot
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.ConciseDateFormatter(locator)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
+            ax.tick_params(axis='x', rotation=20, labelsize='small')
+            ax.tick_params(axis='y', labelsize='small')
+            ax.set_title(df.columns[trace], fontsize=10)
+            ax.grid(True, alpha=0.3)
+        
+        # Adjust layout to prevent overlap
+        fig.tight_layout(pad=1.5)
+        
+    else:
+        # Single axis mode (original behavior)
+        ax = fig.add_subplot(1, 1, 1)
+        
+        # Plot all selected traces on the same axis
+        for trace in selection:
+            sns.lineplot(data=df, x='time', y=df.columns[trace], ax=ax, label=df.columns[trace])
+        
+        # Add vertical lines and spans
+        try:
+            ax.axvline(df['time'].iloc[xloc1], color='green', linestyle='--')
+            ax.axvline(df['time'].iloc[xloc2], color='red', linestyle='--')
+            ax.axvspan(df['time'].iloc[xloc1], df['time'].iloc[xloc2], facecolor='gray', alpha=.25)
+            ax.axvline(df['time'].iloc[xlocA], color='#90EE90', linestyle=':')
+            ax.axvline(df['time'].iloc[xlocB], color='#FF7276', linestyle=':')
+            ax.axvspan(df['time'].iloc[xlocA], df['time'].iloc[xlocB], facecolor='gray', alpha=.25)
+        except IndexError:
+            pass
+        
+        # Format the main plot
+        locator = mdates.AutoDateLocator()
+        formatter = mdates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+        ax.tick_params(axis='x', rotation=20)
+        
+        # Add legend if multiple traces
+        if len(selection) > 1:
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
 def plot_big5(df, parent_window):
 	"""
