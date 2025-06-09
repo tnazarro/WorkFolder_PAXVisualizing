@@ -7,7 +7,8 @@ geometry_width_pct = 0.9
 geometry_height_pct = 0.9
 
 #Location of the logo image
-logo_name = "MVC_CopilotHelp\\assets\\DropletLogoTemp.png"
+logo_name = "assets\\DropletLogoTemp.png"
+#Double check the path to the logo image
 
 #starting column index (if implemented)
 col_index = 0

@@ -172,5 +172,7 @@ def clear_df():
 	"""
 	constants.df_main = pd.DataFrame()
 	constants.df_to_add = pd.DataFrame()
+
+
 	
 	

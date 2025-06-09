@@ -69,10 +69,16 @@ def slider_changed(event, df, selection, ax, xlocI0Low, xlocI0High, xlocCalibLow
 
 	ax.clear()
 	plot_data(df, selection, ax, xloc1, xloc2, xlocA, xlocB)
-	
+     #Is there any reason to have slider_changed instead of just plot_data?
+
+	#Use this section to update the vertical lines based on the slider value
+     #call the plot_data function to update the plot with the new xloc values
+
 	# Update the canvas
 	canvas.draw()
-     
+
+	
+
 	#This block of code is a placeholder for the slider functionality
 
 
@@ -155,6 +161,7 @@ def plot_4x(df, parent_window):
 	new4x.title("Temp 4x Sanity Check Window")
 	new4x.geometry("1200x1000")
 	tk.Label(new4x, text="Test (WIP)").pack()
+
 
 	btn = tk.Button(new4x, 
 					text="Click to close this window", 

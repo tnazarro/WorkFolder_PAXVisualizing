@@ -151,17 +151,22 @@ class PAXView:
             )
             )
         )
+        
+        
         #TODO: Add a command to the slider to update the label with the current value
         # self.slider_I0Low.bind("<Motion>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<Leave>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<Enter>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
+        #Prioritize release as it is similar to PADs
         # self.slider_I0Low.bind("<ButtonRelease-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<ButtonRelease-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<ButtonRelease-2>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<Button-1>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         # self.slider_I0Low.bind("<Button-3>", lambda event: update_label(self.label_sliderI0Low, self.current_valueI0Low.get()))
         #TODO: Add a command to the slider to update the position on the slider on the graph
-        #self.slider_I0H
+        
+        
+        
 
         self.slider_I0Low.grid(row=6, column=0)
 
@@ -172,7 +177,21 @@ class PAXView:
             to=1000,
             orient='horizontal',
             variable=self.current_valueI0High,
-            command=lambda event: slider_changed2(event, self.df, self.current_value2, self.label_slider2, self.plot_callback)
+            command=lambda event: slider_changed(
+            event, 
+            constants.df_main,  # Replace self.df with constants.df_main
+            self.current_valueI0Low,  # Replace self.current_value1 with self.current_valueI0Low
+            self.label_sliderI0Low,  # Replace self.label_slider1 with self.label_sliderI0Low
+            lambda: plot_data(  # Replace self.plot_callback with an inline lambda for plotting
+                constants.df_main, 
+                self.listbox.curselection(), 
+                self.main_axes.get_axes(), 
+                self.current_valueI0Low.get(), 
+                self.current_valueI0High.get(), 
+                self.current_valueCalibLow.get(), 
+                self.current_valueCalibHigh.get()
+            )
+            )
         )
         self.slider_I0High.grid(row=7, column=0)
 
