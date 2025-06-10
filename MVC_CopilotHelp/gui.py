@@ -123,7 +123,7 @@ class PAXView:
         #Main button to generate the calibration frame; this will call the function to generate the calibration frame
         self.calibStarter = tk.Button(self.frame_MR, 
             text = "Generate calibration frame", 
-            command = lambda: create_modern_calibration_window(self.root, self), bg = 'light blue')
+            command = lambda: create_modern_calibration_window(self.root, self, constants), bg = 'light blue')
         self.calibStarter.grid(row = 4, column = 2)
 
         #TODO: Work on the section below 
@@ -401,12 +401,12 @@ class PAXView:
 
 
 
-def create_modern_calibration_window(parent_window, gui_instance):
+def create_modern_calibration_window(parent_window, gui_instance, constants_module):
     """
     Function to create the calibration window.
     Call this from your "Generate calibration frame" button.
     """
-    return ModernCalibrationWindow(parent_window, gui_instance)
+    return ModernCalibrationWindow(parent_window, gui_instance, constants_module)
 
 #Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
 class CollapsibleFrame(ttk.Frame):

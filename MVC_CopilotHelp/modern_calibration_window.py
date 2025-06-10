@@ -16,7 +16,7 @@ from scipy.stats import linregress
 from constants import *
 
 class ModernCalibrationWindow:
-    def __init__(self, parent_window, gui_instance):
+    def __init__(self, parent_window, gui_instance, constants_module):
         """
         Create a modern calibration analysis window.
         
@@ -26,6 +26,7 @@ class ModernCalibrationWindow:
         """
         self.parent = parent_window
         self.gui = gui_instance
+        self.constants = constants_module
         
         # Create the calibration window
         self.create_calibration_window()
@@ -34,7 +35,7 @@ class ModernCalibrationWindow:
         self.analysis_results = {}
         
     def create_calibration_window(self):
-        """Create the main calibration window with modern styling"""
+        """Create the main calibration window with modern styling and scrolling"""
         
         # Create toplevel window
         self.calib_window = tk.Toplevel(self.parent)
@@ -45,20 +46,57 @@ class ModernCalibrationWindow:
         # Make window resizable but set minimum size
         self.calib_window.minsize(1200, 700)
         
-        # Create main layout
-        self.create_header_section()
-        self.create_parameters_section()
-        self.create_plots_section()
-        self.create_results_section()
-        self.create_action_buttons()
+        # CREATE SCROLLABLE CONTAINER
+        main_container = tk.Frame(self.calib_window)
+        main_container.pack(fill="both", expand=True)
+
+        # Create canvas for scrolling
+        canvas = tk.Canvas(main_container, highlightthickness=0)
+        canvas.pack(side="left", fill="both", expand=True)
+
+        # Add vertical scrollbar
+        v_scrollbar = tk.Scrollbar(main_container, orient="vertical", command=canvas.yview)
+        v_scrollbar.pack(side="right", fill="y")
+
+        # Configure canvas scrolling
+        canvas.configure(yscrollcommand=v_scrollbar.set)
+
+        # Create the scrollable frame that will contain all content
+        scrollable_frame = tk.Frame(canvas)
+        
+        # Add the scrollable frame to the canvas
+        canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        # Bind events for proper scrolling behavior
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        def on_canvas_configure(event):
+            canvas.itemconfig(canvas_window, width=event.width)
+        
+        def on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        scrollable_frame.bind("<Configure>", on_frame_configure)
+        canvas.bind("<Configure>", on_canvas_configure)
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+        # Create all sections in the scrollable frame
+        self.create_header_section(scrollable_frame)
+        self.create_parameters_section(scrollable_frame)
+        self.create_plots_section(scrollable_frame)
+        self.create_results_section(scrollable_frame)
+        self.create_action_buttons(scrollable_frame)
         
         # Run analysis immediately if data is available
         self.run_calibration_analysis()
         
-    def create_header_section(self):
+    def create_header_section(self, parent=None):
         """Create the header section with title and status"""
-        
-        header_frame = tk.Frame(self.calib_window, bg="#2c3e50", height=80)
+        if parent is None:
+            parent = self.calib_window
+    
+        header_frame = tk.Frame(parent, bg="#2c3e50", height=80)
         header_frame.pack(fill="x", padx=10, pady=(10, 0))
         header_frame.pack_propagate(False)
         
@@ -85,11 +123,12 @@ class ModernCalibrationWindow:
         )
         self.status_label.pack()
         
-    def create_parameters_section(self):
+    def create_parameters_section(self, parent=None):
         """Create the parameters display section"""
-        
+        if parent is None:
+            parent = self.calib_window
         params_frame = ttk.LabelFrame(
-            self.calib_window, 
+            parent, 
             text="📊 Analysis Parameters", 
             padding="15"
         )
@@ -117,7 +156,7 @@ class ModernCalibrationWindow:
         
         # Data info
         self.create_parameter_display(params_grid, "Total Data Points:", 
-                                    lambda: f"{len(constants.df_main)}" if not constants.df_main.empty else "0", 1, 2)
+                                    lambda: f"{len(self.constants.df_main)}" if not self.constants.df_main.empty else "0", 1, 2)
         self.create_parameter_display(params_grid, "Selected Range:", 
                                     self.get_time_range_text, 1, 3)
         
@@ -140,24 +179,25 @@ class ModernCalibrationWindow:
     def get_time_range_text(self):
         """Get formatted time range text"""
         try:
-            if constants.df_main.empty:
+            if self.constants.df_main.empty:
                 return "No data"
             
             start_idx = int(self.gui.current_valueCalibLow.get())
             end_idx = int(self.gui.current_valueCalibHigh.get())
             
-            start_time = constants.df_main['time'].iloc[start_idx].strftime('%H:%M:%S')
-            end_time = constants.df_main['time'].iloc[end_idx].strftime('%H:%M:%S')
+            start_time = self.constants.df_main['time'].iloc[start_idx].strftime('%H:%M:%S')
+            end_time = self.constants.df_main['time'].iloc[end_idx].strftime('%H:%M:%S')
             
             return f"{start_time} - {end_time}"
         except:
             return "Invalid range"
         
-    def create_plots_section(self):
+    def create_plots_section(self, parent=None):
         """Create the plots section with two subplots"""
-        
+        if parent is None:
+            parent = self.calib_window
         plots_frame = ttk.LabelFrame(
-            self.calib_window, 
+            parent, 
             text="📈 Analysis Plots", 
             padding="10"
         )
@@ -189,11 +229,12 @@ class ModernCalibrationWindow:
         self.toolbar = NavigationToolbar2Tk(self.canvas, toolbar_frame)
         self.toolbar.update()
         
-    def create_results_section(self):
+    def create_results_section(self, parent=None):
         """Create the results display section"""
-        
+        if parent is None:
+            parent = self.calib_window
         results_frame = ttk.LabelFrame(
-            self.calib_window, 
+            parent, 
             text="📋 Analysis Results", 
             padding="15"
         )
@@ -245,10 +286,11 @@ class ModernCalibrationWindow:
         
         setattr(self, attr_name, value_label)
         
-    def create_action_buttons(self):
+    def create_action_buttons(self, parent=None):
         """Create action buttons at the bottom"""
-        
-        button_frame = tk.Frame(self.calib_window, bg="#f8f9fa")
+        if parent is None:
+            parent = self.calib_window
+        button_frame = tk.Frame(parent, bg="#f8f9fa")
         button_frame.pack(fill="x", padx=10, pady=10)
         
         # Refresh analysis button
@@ -318,7 +360,7 @@ class ModernCalibrationWindow:
             xlocB = int(self.gui.current_valueCalibHigh.get())
             
             # Get data
-            df = constants.df_main
+            df = self.constants.df_main
             
             if df.empty:
                 messagebox.showerror("Error", "No data loaded!")
