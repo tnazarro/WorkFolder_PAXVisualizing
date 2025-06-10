@@ -16,6 +16,7 @@ from gui import * #The central hub that interfaces with the user
 from constants import * #Constants and global variables
 from plotting import * #functions that handle visualization
 from data_processing import * #functions that handle file loading and data frame manipulation
+from modern_calibration_window import * #handles the calibration window for the PAX data
 
 def main():
     """

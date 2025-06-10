@@ -15,6 +15,7 @@ from constants import *
 from data_processing import *
 from controller import resource_path, alarm_translate, writeToLog
 from plotting import *
+from modern_calibration_window import ModernCalibrationWindow
 
 #One class handles the main viewing window, and calls it root for reference; can be passed main application window
 class PAXView:
@@ -121,8 +122,8 @@ class PAXView:
 
         #Main button to generate the calibration frame; this will call the function to generate the calibration frame
         self.calibStarter = tk.Button(self.frame_MR, 
-             text = "Generate calibration frame", 
-             command = lambda: print("calibStarter"), bg = 'light blue')
+            text = "Generate calibration frame", 
+            command = lambda: create_modern_calibration_window(self.root, self), bg = 'light blue')
         self.calibStarter.grid(row = 4, column = 2)
 
         #TODO: Work on the section below 
@@ -398,6 +399,14 @@ class PAXView:
         
         self.update_plot_from_sliders()
 
+
+
+def create_modern_calibration_window(parent_window, gui_instance):
+    """
+    Function to create the calibration window.
+    Call this from your "Generate calibration frame" button.
+    """
+    return ModernCalibrationWindow(parent_window, gui_instance)
 
 #Creates a collapsible tkinter frame, for selectively hiding elements. Each instance of the collapsible frame can toggle itself
 class CollapsibleFrame(ttk.Frame):
