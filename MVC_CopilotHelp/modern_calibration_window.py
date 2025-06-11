@@ -336,7 +336,7 @@ class ModernCalibrationWindow:
         close_btn.pack(side="right")
         
     def run_calibration_analysis(self):
-        """Run the calibration analysis using your original logic"""
+        """Run the calibration analysis using original logic"""
         
         try:
             # Update status
@@ -401,7 +401,7 @@ class ModernCalibrationWindow:
             return False
             
     def analyze_scattering_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
-        """Analyze in scattering mode (your original logic)"""
+        """Analyze in scattering mode"""
         
         # Extract data for the specified range
         filtered_time = df['time'].iloc[xlocA:xlocB]
@@ -449,7 +449,7 @@ class ModernCalibrationWindow:
             messagebox.showwarning("Warning", "Not enough data points after filtering!")
             
     def analyze_absorbing_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
-        """Analyze in absorbing mode (your original logic)"""
+        """Analyze in absorbing mode """
         
         # Extract data for the specified range
         filtered_time = df['time'].iloc[xlocA:xlocB]

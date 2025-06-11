@@ -1,5 +1,3 @@
-#views.py
-
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -87,7 +85,6 @@ class PAXView:
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side="top", fill="both", expand=True)
         self.ax = self.main_axes.get_axes()
-        #TODO: Edit to make a more advanced plot with multiple axes, and a more advanced toolbar
 
         #The Middle Right (MR) frame for the calibration options (this will be a collapsible frame)
         self.container_MR = CollapsibleFrame(root, title="Calibration Options")
@@ -126,7 +123,6 @@ class PAXView:
             command = lambda: create_modern_calibration_window(self.root, self, constants), bg = 'light blue')
         self.calibStarter.grid(row = 4, column = 2)
 
-        #TODO: Work on the section below 
         # Beginning of I0 slider logic
         self.label_spanI0 = tk.Label(self.frame_MR, text="I0 selection:")
         self.label_spanI0.grid(row=5, column=0)
@@ -261,7 +257,6 @@ class PAXView:
         self.plot_mode_label.grid(row=4, column=0, sticky='w')
 
 
-        #TODO: Add a BM section that calls the big 5 and 4x plots
         #The bottom middle (BM) frame for the big 5 and 4x plots
         self.frame_BM = tk.Frame(root)
         self.button_big5 = tk.Button(self.frame_BM, text="Plot Big 5", command=lambda: plot_big5(constants.df_main, self.root), bg='light blue')
@@ -353,7 +348,7 @@ class PAXView:
 
     def update_plot_from_sliders(self):
         """
-        REPLACE your existing update_plot_from_sliders method with this enhanced version.
+        REPLACE existing update_plot_from_sliders method with this enhanced version.
         """
         if constants.df_main.empty or not self.listbox.curselection():
             return
@@ -381,7 +376,7 @@ class PAXView:
 
     def on_listbox_select(self, event):
         """
-        REPLACE your existing on_listbox_select method with this enhanced version.
+        REPLACE existing on_listbox_select method with this enhanced version.
         """
         if constants.df_main.empty or not self.listbox.curselection():
             messagebox.showerror("Error", "No data to plot or no selection made")
@@ -404,7 +399,7 @@ class PAXView:
 def create_modern_calibration_window(parent_window, gui_instance, constants_module):
     """
     Function to create the calibration window.
-    Call this from your "Generate calibration frame" button.
+    Call this from the "Generate calibration frame" button.
     """
     return ModernCalibrationWindow(parent_window, gui_instance, constants_module)
 
