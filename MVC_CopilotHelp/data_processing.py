@@ -19,6 +19,9 @@ def load_file(selected, file_to_set, pb):
     """
     pb.start()
 	# Get the file path based on the selected format
+	#TODO: Alter this to filename(s) to allow for multiple file selection, and handle concatenation/analysis automatically
+	#Turns out it's acutally easier than i thought, just need to change the file dialog to allow multiple files
+	#But after that, i'll still have to handle the separation of the tuple and the concatenation of the dataframes
     if selected.get() == "V1":
         file_path = filedialog.askopenfilename(title="Choose PAX Data File", filetypes=(("Comma Separated", "*.csv"),))
     elif selected.get() == "V2":
