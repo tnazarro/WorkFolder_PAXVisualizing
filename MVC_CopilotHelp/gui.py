@@ -10,7 +10,21 @@ import sys
 
 #This should import the constants from the constants.py file in the same directory, and anything else needed
 from constants import *
-from data_processing import *
+# Import specific functions instead of * for better control
+from data_processing import (
+    load_multiple_files, 
+    process_multiple_files_automatically, 
+    get_file_info_summary,
+    load_file,  # Legacy
+    pax_analyzer,  # Legacy
+    concatenate_df,  # Legacy
+    simple_listbox_load,
+    process_paxtxt,
+    clear_df,
+    clearNaN,
+    update_df_main,
+    update_df_to_add
+)
 from controller import resource_path, alarm_translate, writeToLog
 from plotting import *
 from modern_calibration_window import ModernCalibrationWindow
@@ -28,35 +42,30 @@ class PAXView:
         self.root.geometry(str(int(screen_width*geometry_width_pct))+"x"+str(int(screen_height*geometry_height_pct)))
 
         #Topleft (TL) frame for file loading and radio buttons
-        self.frame_TL = tk.Frame(root)
-        self.selected = tk.StringVar() #Variable to hold the selected file type
-        self.selected.set("V2") #Default to .xlsx
-        self.file_path = tk.StringVar()
-        self.file_path.set("")
-        self.radio_csv = tk.Radiobutton(self.frame_TL, text="Load default .csv", value="V1", variable=self.selected)
-        self.radio_xlsx = tk.Radiobutton(self.frame_TL, text="Load default .xlsx", value="V2", variable=self.selected)
-        self.load_file_button = tk.Button(self.frame_TL, text="Load PAX data file", command=lambda: load_file(self.selected, self.file_path,self.pb), width=30, bg='orange')
-        self.load_file_button.grid(row=0, column=0, columnspan=3)
-        self.radio_csv.grid(row=1, column=0)
-        self.radio_xlsx.grid(row=1, column=1)
-        self.frame_TL.grid(row=0, column=0)
+
+        # Create enhanced top-left frame with multi-file capabilities
+        self.create_enhanced_topleft_frame(root)
+
         # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
-        self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", 
-                                        command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self), 
-                                        bg='light green')
-        self.analyze_button.grid(row=2, column=0, columnspan=3)
         
-        self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
-        self.radio_version.grid(row=4, column=0)
-        #Currently, the version handling is not very advanced, and the processing/concatenating functions are finicky. See readme for more details
-        self.add_version_button = tk.Button(self.frame_TL, text="Process Pax.txt", command=lambda: process_paxtxt(self.file_path.get(),self.version_var), bg='light blue')
-        self.add_version_button.grid(row=4, column=1, columnspan=1)
-        self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_df(self.file_path.get(), self.selected, self.listbox), bg='light blue')
-        self.concatenate_button.grid(row=3, column=0, columnspan=3)
-        self.load_concatenated_button = tk.Button(self.frame_TL, text="Load Concatenated Data", command=lambda: simple_listbox_load(self.listbox), bg='light blue')
-        self.load_concatenated_button.grid(row=5, column=0, columnspan=3)
-        self.clear_df_button = tk.Button(self.frame_TL, text="Clear DataFrame", command=lambda: clear_df(), bg='light blue')
-        self.clear_df_button.grid(row=6, column=0, columnspan=3)
+        
+        #===Legacy code for the top left frame===
+        # self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", 
+        #                                 command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self), 
+        #                                 bg='light green')
+        # self.analyze_button.grid(row=2, column=0, columnspan=3)
+        
+        # self.radio_version = tk.Radiobutton(self.frame_TL, text="(optional) Load Pax.txt", value="V3", variable=self.selected)
+        # self.radio_version.grid(row=4, column=0)
+        # #Currently, the version handling is not very advanced, and the processing/concatenating functions are finicky. See readme for more details
+        # self.add_version_button = tk.Button(self.frame_TL, text="Process Pax.txt", command=lambda: process_paxtxt(self.file_path.get(),self.version_var), bg='light blue')
+        # self.add_version_button.grid(row=4, column=1, columnspan=1)
+        # self.concatenate_button = tk.Button(self.frame_TL, text="Concatenate Loaded Data", command=lambda: concatenate_df(self.file_path.get(), self.selected, self.listbox), bg='light blue')
+        # self.concatenate_button.grid(row=3, column=0, columnspan=3)
+        # self.load_concatenated_button = tk.Button(self.frame_TL, text="Load Concatenated Data", command=lambda: simple_listbox_load(self.listbox), bg='light blue')
+        # self.load_concatenated_button.grid(row=5, column=0, columnspan=3)
+        # self.clear_df_button = tk.Button(self.frame_TL, text="Clear DataFrame", command=lambda: clear_df(), bg='light blue')
+        # self.clear_df_button.grid(row=6, column=0, columnspan=3)
 
         #TC
         self.frame_TC = tk.Frame(root)
@@ -242,10 +251,13 @@ class PAXView:
         self.testTextButton.grid(row=1, column=0)
         # Subplot toggle controls
         self.subplot_mode = tk.BooleanVar()
-        self.subplot_mode.set(False)  # Default to single axis mode
+        self.subplot_mode.set(True)  # Default to multi axis mode
         
+        #Moved to bottom-middle for better layout
+        self.frame_BM = tk.Frame(root)
+        self.frame_BM.grid(row=4, column=3)
         self.subplot_checkbox = tk.Checkbutton(
-            self.frame_BL, 
+            self.frame_BM, 
             text="Use Subplots", 
             variable=self.subplot_mode,
             command=self.on_subplot_toggle
@@ -253,26 +265,30 @@ class PAXView:
         self.subplot_checkbox.grid(row=3, column=0, sticky='w')
         
         # Optional: Add a label to show current mode
-        self.plot_mode_label = tk.Label(self.frame_BL, text="Mode: Single Axis", fg='blue', font=('Arial', 8))
-        self.plot_mode_label.grid(row=4, column=0, sticky='w')
+        self.plot_mode_label = tk.Label(self.frame_BM, text="Mode: Subplots (max 4)", fg='blue', font=('Arial', 8))
+        self.plot_mode_label.grid(row=2, column=0, sticky='w')
 
 
         #The bottom middle (BM) frame for the big 5 and 4x plots
-        self.frame_BM = tk.Frame(root)
-        self.button_big5 = tk.Button(self.frame_BM, text="Plot Big 5", command=lambda: plot_big5(constants.df_main, self.root), bg='light blue')
-        self.button_big5.grid(row=0, column=0)
-        self.frame_BM.grid(row=4, column=3)
-        self.button_4x = tk.Button(self.frame_BM, text="Plot 4x", command=lambda: plot_4x(constants.df_main, self.root), bg='light blue')
-        self.button_4x.grid(row=1, column=0)
+        #Commented out for now, as these are redundant with the new plotting system
+        # self.frame_BM = tk.Frame(root)
+        # self.button_big5 = tk.Button(self.frame_BM, text="Plot Big 5", command=lambda: plot_big5(constants.df_main, self.root), bg='light blue')
+        # self.button_big5.grid(row=0, column=0)
+        # self.frame_BM.grid(row=4, column=3)
+        # self.button_4x = tk.Button(self.frame_BM, text="Plot 4x", command=lambda: plot_4x(constants.df_main, self.root), bg='light blue')
+        # self.button_4x.grid(row=1, column=0)
 
         #The bottom right (BR) frame for the progress bar and version info
         self.frame_BR = tk.Frame(root)
         self.frame_BR.grid(row=4, column=5)
-        #TODO: Set up the version text to be a label that updates with the version of the program
-        self.version_var = tk.StringVar()
-        self.version_var.set("Version Unknown")
-        self.label_version = tk.Label(self.frame_BR, textvariable=self.version_var, fg='blue')
-        self.label_version.grid(row=1, column=0)
+
+        # Commented out the version label for now, as it is not implemented yet
+        # #TODO: Set up the version text to be a label that updates with the version of the program
+        # self.version_var = tk.StringVar()
+        # self.version_var.set("Version Unknown")
+        # self.label_version = tk.Label(self.frame_BR, textvariable=self.version_var, fg='blue')
+        # self.label_version.grid(row=1, column=0)
+
         self.pb = ttk.Progressbar(self.frame_BR, orient="horizontal", length=200, mode="determinate")
         self.pb.grid(row=0, column=0)
 
@@ -284,9 +300,243 @@ class PAXView:
         self.scrollbar = tk.Scrollbar(self.list_frame, orient="vertical")
         self.listbox.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.listbox.yview)
-        self.list_frame.grid(row=2, column=0)
+        self.list_frame.grid(row=2, column=0, padx= 5, pady=5, sticky='nsew')
         self.listbox.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
+
+    def create_enhanced_topleft_frame(self, root):
+        """
+        Enhanced version of the top-left frame with multi-file loading capabilities.
+        """
+        # Topleft (TL) frame for file loading and radio buttons
+        self.frame_TL = tk.Frame(root)
+        self.selected = tk.StringVar() # Variable to hold the selected file type
+        self.selected.set("V2") # Default to .xlsx
+        self.file_path = tk.StringVar()
+        self.file_path.set("")
+        
+        # Radio buttons for file type selection
+        self.radio_csv = tk.Radiobutton(self.frame_TL, text="CSV files", value="V1", variable=self.selected)
+        self.radio_xlsx = tk.Radiobutton(self.frame_TL, text="Excel files", value="V2", variable=self.selected)
+        # self.radio_paxtxt = tk.Radiobutton(self.frame_TL, text="PAX.txt files", value="V3", variable=self.selected)
+        
+        # Enhanced file loading buttons
+        self.load_single_button = tk.Button(
+            self.frame_TL, 
+            text="📁 Load Single File", 
+            command=self.load_single_file_legacy,
+            width=25, 
+            bg='#3498db',
+            fg='white',
+            font=('Arial', 9, 'bold')
+        )
+        
+        self.load_multiple_button = tk.Button(
+            self.frame_TL, 
+            text="📂 Load Multiple Files", 
+            command=self.load_and_process_multiple_files,
+            width=25, 
+            bg='#27ae60',
+            fg='white',
+            font=('Arial', 9, 'bold')
+        )
+        
+        # Analysis button
+        self.analyze_button = tk.Button(
+            self.frame_TL, 
+            text="🔍 Analyze Data", 
+            command=self.analyze_current_data,
+            width=25,
+            bg='#f39c12',
+            fg='white',
+            font=('Arial', 9, 'bold')
+        )
+        
+        # Data info button
+        self.data_info_button = tk.Button(
+            self.frame_TL,
+            text="ℹ️ Data Summary",
+            command=self.show_data_summary,
+            width=25,
+            bg='#9b59b6',
+            fg='white',
+            font=('Arial', 9, 'bold')
+        )
+        
+        # Legacy buttons (for compatibility)
+        self.concatenate_button = tk.Button(
+            self.frame_TL, 
+            text="Concatenate Single File", 
+            command=lambda: concatenate_df(self.file_path.get(), self.selected, self.listbox), 
+            bg='#95a5a6',
+            font=('Arial', 8)
+        )
+        
+        self.load_concatenated_button = tk.Button(
+            self.frame_TL, 
+            text="Reload Listbox", 
+            command=lambda: simple_listbox_load(self.listbox), 
+            bg='#95a5a6',
+            font=('Arial', 8)
+        )
+        
+        self.clear_df_button = tk.Button(
+            self.frame_TL, 
+            text="Clear All Data", 
+            command=self.clear_all_data, 
+            bg='#e74c3c',
+            fg='white',
+            font=('Arial', 8, 'bold')
+        )
+        
+        # Layout the components
+        # self.load_single_button.grid(row=0, column=0, columnspan=3, pady=2, padx=2, sticky='ew') #Commented out to avoid confusion with the new multi-file button
+        self.load_multiple_button.grid(row=0, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+        
+        self.radio_csv.grid(row=1, column=0, sticky='w')
+        self.radio_xlsx.grid(row=1, column=1, sticky='w')
+        # self.radio_paxtxt.grid(row=1, column=2, sticky='w')
+        
+        #Commented out the single file analyze button to avoid confusion with the new multi-file button
+        # self.analyze_button.grid(row=2, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+        self.data_info_button.grid(row=2, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+        
+        #Unused legacy buttons commented out for now, but can be uncommented if needed
+        # # Separator
+        # separator = ttk.Separator(self.frame_TL, orient='horizontal')
+        # separator.grid(row=5, column=0, columnspan=3, sticky='ew', pady=5)
+        
+        # # Legacy functions (smaller buttons)
+        # legacy_label = tk.Label(self.frame_TL, text="Legacy Functions:", font=('Arial', 8, 'italic'))
+        # legacy_label.grid(row=6, column=0, columnspan=3)
+        
+        # self.concatenate_button.grid(row=7, column=0, columnspan=3, pady=1, padx=2, sticky='ew')
+        # self.load_concatenated_button.grid(row=8, column=0, columnspan=3, pady=1, padx=2, sticky='ew')
+        # self.clear_df_button.grid(row=9, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+        
+        # Process PAX.txt button (if needed)
+        # Commented out for cleanliness as it is not currently used
+        # self.add_version_button = tk.Button(
+        #     self.frame_TL, 
+        #     text="Process Pax.txt", 
+        #     command=lambda: process_paxtxt(self.file_path.get(), self.version_var), 
+        #     bg='#95a5a6',
+        #     font=('Arial', 8)
+        # )
+        # self.add_version_button.grid(row=10, column=0, columnspan=3, pady=1, padx=2, sticky='ew')
+        
+        self.frame_TL.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+
+    def load_single_file_legacy(self):
+        """Load a single file using the legacy method."""
+        load_file(self.selected, self.file_path, self.pb)
+
+    def load_and_process_multiple_files(self):
+        """Load multiple files and automatically process and concatenate them."""
+        try:
+            # Load multiple files
+            file_paths = load_multiple_files(self.selected, self.file_path, self.pb)
+            
+            if file_paths:
+                # Automatically process and concatenate the files
+                process_multiple_files_automatically(
+                    file_paths, 
+                    self.selected, 
+                    self.listbox, 
+                    gui_instance=self,
+                    pb=self.pb
+                )
+                
+                # Log the operation
+                writeToLog(f"Loaded and processed {len(file_paths)} files successfully", self.log)
+                
+            else:
+                writeToLog("No files selected for multi-file loading", self.log)
+                
+        except Exception as e:
+            messagebox.showerror("Multi-File Loading Error", f"Error during multi-file loading: {str(e)}")
+            writeToLog(f"Error in multi-file loading: {str(e)}", self.log)
+
+    def analyze_current_data(self):
+        """Analyze the currently loaded data (works for both single and multi-file data)."""
+        if constants.df_main.empty:
+            messagebox.showwarning("No Data", "Please load data files first!")
+            return
+        
+        try:
+            # Refresh the listbox
+            simple_listbox_load(self.listbox)
+            
+            # Update slider ranges
+            self.update_slider_ranges_after_load()
+            
+            # Show success message
+            row_count = len(constants.df_main)
+            if 'source_file' in constants.df_main.columns:
+                file_count = constants.df_main['source_file'].nunique()
+                message = f"Analysis complete!\n\nData loaded: {row_count:,} rows from {file_count} file(s)"
+            else:
+                message = f"Analysis complete!\n\nData loaded: {row_count:,} rows"
+            
+            messagebox.showinfo("Analysis Complete", message)
+            writeToLog(f"Data analysis complete: {row_count:,} rows", self.log)
+            
+        except Exception as e:
+            messagebox.showerror("Analysis Error", f"Error during data analysis: {str(e)}")
+            writeToLog(f"Analysis error: {str(e)}", self.log)
+
+    def show_data_summary(self):
+        """Show a detailed summary of the currently loaded data."""
+        if constants.df_main.empty:
+            messagebox.showinfo("Data Summary", "No data currently loaded.")
+            return
+        
+        try:
+            file_info = get_file_info_summary()
+            
+            # Build summary message
+            summary = "📊 Data Summary\n" + "="*40 + "\n\n"
+            
+            if isinstance(file_info.get("total_files"), int):
+                summary += f"📁 Source files: {file_info['total_files']}\n"
+                summary += f"📈 Total rows: {file_info['total_rows']:,}\n\n"
+                
+                if file_info['files_detail']:
+                    summary += "📋 Rows per file:\n"
+                    for filename, count in file_info['files_detail'].items():
+                        summary += f"  • {filename}: {count:,} rows\n"
+                    summary += "\n"
+                
+                if file_info['time_range']['start'] and file_info['time_range']['end']:
+                    summary += f"⏰ Time range:\n"
+                    summary += f"  Start: {file_info['time_range']['start']}\n"
+                    summary += f"  End: {file_info['time_range']['end']}\n"
+            else:
+                summary += f"📈 Total rows: {file_info['total_rows']:,}\n"
+                summary += f"📁 Source: {file_info['total_files']}\n"
+            
+            # Show columns info
+            excluded_cols = ['Alarm', 'time', 'source_file']
+            data_columns = [col for col in constants.df_main.columns if col not in excluded_cols]
+            summary += f"\n📊 Data columns: {len(data_columns)}\n"
+            
+            messagebox.showinfo("Data Summary", summary)
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Error generating data summary: {str(e)}")
+
+    def clear_all_data(self):
+        """Clear all loaded data with confirmation."""
+        if constants.df_main.empty:
+            messagebox.showinfo("Clear Data", "No data to clear.")
+            return
+        
+        if messagebox.askyesno("Clear Data", "Are you sure you want to clear all loaded data?\n\nThis action cannot be undone."):
+            clear_df()
+            self.listbox.delete(0, 'end')
+            self.file_path.set("")
+            writeToLog("All data cleared", self.log)
+            messagebox.showinfo("Data Cleared", "All data has been cleared successfully.")
 
 
     def quit_app(self):

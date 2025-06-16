@@ -245,12 +245,6 @@ def plot_big5(df, parent_window):
 	toolbar.update()
 	toolbar.pack()
 
-
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-
-import matplotlib.dates as mdates
-
 def plot_4x(df, parent_window):
 	"""
 	Create a 4x4 sanity check plot in a new Tkinter window.

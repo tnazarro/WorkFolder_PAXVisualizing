@@ -43,3 +43,5 @@ MVC_CopilotHelp/__pycache__/modern_calibration_window.cpython-312.pyc
 MVC_CopilotHelp/build/PAX_Data_Visualizer/localpycs/struct.pyc
 MVC_CopilotHelp/__pycache__/gui.cpython-312.pyc
 MVC_CopilotHelp/__pycache__/modern_calibration_window.cpython-312.pyc
+MVC_CopilotHelp/data_processing_backup.py
+MVC_CopilotHelp/gui_backup.py
