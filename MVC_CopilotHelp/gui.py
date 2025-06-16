@@ -23,7 +23,8 @@ from data_processing import (
     clear_df,
     clearNaN,
     update_df_main,
-    update_df_to_add
+    update_df_to_add,
+    pax_analyzer_flexible
 )
 from controller import resource_path, alarm_translate, writeToLog
 from plotting import *
@@ -453,7 +454,7 @@ class PAXView:
             
             if file_paths:
                 # Automatically process and concatenate the files
-                process_multiple_files_automatically(
+                process_multiple_files_automatically_flexible(
                     file_paths, 
                     self.selected, 
                     self.listbox, 

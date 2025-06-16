@@ -404,7 +404,8 @@ def calculate_extinction_coefficient(df, i0_low_idx, i0_high_idx,
         # Try alternative column names
         alt_names = [
             'Detected Laser Power (W)', 
-            'Laser Power (W)'
+            'Laser Power (W)',
+            'Laser power (W)'
         ]
         found_col = None
         for alt_name in alt_names:
@@ -514,3 +515,338 @@ def update_listbox_with_new_column(gui_instance, highlight_column=None):
                 gui_instance.listbox.itemconfigure(i, background='#90EE90', foreground='#006400')  # Light green with dark green text
             
             i += 1
+            
+def create_time_column(df):
+    """
+    Create a 'time' column using flexible logic:
+    1. Try to combine 'Local Date' and 'Local Time' columns
+    2. Try alternative time column combinations
+    3. Fall back to row index if time columns unavailable/malformed
+    
+    Parameters:
+    - df: DataFrame containing PAX data
+    
+    Returns:
+    - time_series: pandas Series with time data (either datetime or index)
+    - time_source: string describing what was used for time
+    """
+    
+    time_series = None
+    time_source = "unknown"
+    
+    # Strategy 1: Try standard Local Date + Local Time combination
+    try:
+        if 'Local Date' in df.columns and 'Local Time' in df.columns:
+            print("📅 Attempting to create time from 'Local Date' + 'Local Time'")
+            time_series = pd.to_datetime(
+                df['Local Date'].astype(str) + ',' + df['Local Time'].astype(str), 
+                format='%Y-%m-%d,%H:%M:%S'
+            )
+            time_source = "Local Date + Local Time"
+            print(f"✅ Successfully created time column from {time_source}")
+            return time_series, time_source
+    except Exception as e:
+        print(f"⚠️ Failed to create time from Local Date + Local Time: {str(e)}")
+    
+    # Strategy 2: Try alternative datetime column combinations
+    datetime_combinations = [
+        # (date_col, time_col, format)
+        ('Date', 'Time', '%Y-%m-%d,%H:%M:%S'),
+        ('Local Date', 'Local Time', '%m/%d/%Y,%H:%M:%S'),  # Alternative format
+        ('Local Date', 'Local Time', '%Y-%m-%d %H:%M:%S'),  # Space instead of comma
+        ('Date', 'Time', '%m/%d/%Y,%H:%M:%S'),
+    ]
+    
+    for date_col, time_col, fmt in datetime_combinations:
+        try:
+            if date_col in df.columns and time_col in df.columns:
+                print(f"📅 Attempting to create time from '{date_col}' + '{time_col}' with format {fmt}")
+                
+                if fmt.endswith(',%H:%M:%S'):
+                    # Use comma separator
+                    combined_str = df[date_col].astype(str) + ',' + df[time_col].astype(str)
+                else:
+                    # Use space separator
+                    combined_str = df[date_col].astype(str) + ' ' + df[time_col].astype(str)
+                
+                time_series = pd.to_datetime(combined_str, format=fmt)
+                time_source = f"{date_col} + {time_col}"
+                print(f"✅ Successfully created time column from {time_source}")
+                return time_series, time_source
+        except Exception as e:
+            print(f"⚠️ Failed with {date_col} + {time_col}: {str(e)}")
+            continue
+    
+    # Strategy 3: Try existing combined datetime columns
+    potential_time_columns = [
+        'DateTime', 'Timestamp', 'Time', 'Date_Time', 'LocalTime', 
+        'UTC_Time', 'Measurement_Time', 'Sample_Time'
+    ]
+    
+    for col in potential_time_columns:
+        try:
+            if col in df.columns:
+                print(f"📅 Attempting to use existing '{col}' column as time")
+                time_series = pd.to_datetime(df[col])
+                time_source = f"Existing {col} column"
+                print(f"✅ Successfully created time column from {time_source}")
+                return time_series, time_source
+        except Exception as e:
+            print(f"⚠️ Failed to use {col} as time: {str(e)}")
+            continue
+    
+    # Strategy 4: Fall back to row index
+    print("⚠️ No valid time columns found - falling back to row index")
+    try:
+        # Create a simple sequential time series based on row index
+        # Assuming 1-second intervals (common for PAX data)
+        time_series = pd.to_datetime('2000-01-01') + pd.to_timedelta(df.index, unit='s')
+        time_source = "Row index (1-second intervals)"
+        print(f"✅ Created time column from {time_source}")
+        return time_series, time_source
+    except Exception as e:
+        print(f"❌ Even row index fallback failed: {str(e)}")
+        # Last resort: just use integer index
+        time_series = df.index
+        time_source = "Integer row index"
+        print(f"🔧 Using {time_source} as fallback")
+        return time_series, time_source
+
+def process_single_file_with_flexible_time(file_path, file_format):
+    """
+    Process a single PAX file with flexible time handling.
+    
+    Parameters:
+    - file_path: Path to the file
+    - file_format: 'V1' for CSV, 'V2' for Excel
+    
+    Returns:
+    - df: Processed DataFrame with time column and cleaned data
+    - time_source: Description of what was used for time
+    """
+    
+    # Load the file
+    if file_format == "V1":
+        df = pd.read_csv(file_path)
+    elif file_format == "V2":
+        df = pd.read_excel(file_path)
+    else:
+        raise ValueError("Unsupported file format selected.")
+    
+    print(f"📂 Processing file: {os.path.basename(file_path)}")
+    print(f"📊 Original columns: {list(df.columns)}")
+    print(f"📈 Original shape: {df.shape}")
+    
+    # Clean NaN values before any operations
+    clearNaN(df)
+    
+    # Create time column with flexible logic
+    time_series, time_source = create_time_column(df)
+    
+    # Drop unnecessary columns (only if they exist)
+    columns_to_drop = [
+        'Sec UTC', 'DOY UTC', 'Year UTC', 'Sec Local', 'DOY Local', 'Year Local',
+        'Local Date', 'Local Time', 'Reserved.1', 'Reserved.2', 'Reserved.3',
+        'Reserved.4', 'Reserved.5'
+    ]
+    
+    existing_columns_to_drop = [col for col in columns_to_drop if col in df.columns]
+    if existing_columns_to_drop:
+        df.drop(columns=existing_columns_to_drop, inplace=True)
+        print(f"🗑️ Dropped columns: {existing_columns_to_drop}")
+    
+    # Add the time column
+    df['time'] = time_series
+    
+    print(f"⏰ Time source: {time_source}")
+    print(f"🕐 Time range: {df['time'].min()} to {df['time'].max()}")
+    print(f"✅ Final shape: {df.shape}")
+    
+    return df, time_source
+
+# Updated version of the existing functions to use flexible time handling
+
+def pax_analyzer_flexible(file_path, selected, listbox, gui_instance=None):
+    """
+    Enhanced version of pax_analyzer with flexible time handling.
+    """
+    print("File path is " + file_path + ".")
+    
+    try:
+        # Process the file with flexible time handling
+        df, time_source = process_single_file_with_flexible_time(file_path, selected.get())
+        
+        # Add source file tracking
+        df['source_file'] = os.path.basename(file_path)
+        
+        # Populate the listbox with column names
+        populate_listbox(listbox, df)
+        update_df_main(df)
+        
+        # Show summary of what was loaded
+        summary_msg = (
+            f"✅ File loaded successfully!\n\n"
+            f"📁 File: {os.path.basename(file_path)}\n"
+            f"📊 Rows: {len(df):,}\n"
+            f"⏰ Time source: {time_source}\n"
+            f"🕐 Time range: {df['time'].min()} to {df['time'].max()}"
+        )
+        
+        messagebox.showinfo("File Loaded", summary_msg)
+        print(constants.df_main)
+        
+        # Update slider ranges after loading data
+        if gui_instance is not None:
+            gui_instance.update_slider_ranges_after_load()
+            
+    except Exception as e:
+        error_msg = f"Error processing file: {str(e)}"
+        print(error_msg)
+        messagebox.showerror("File Processing Error", error_msg)
+
+def process_multiple_files_automatically_flexible(file_paths, selected, listbox, gui_instance=None, pb=None):
+    """
+    Enhanced version of process_multiple_files_automatically with flexible time handling.
+    """
+    if not file_paths:
+        messagebox.showerror("Error", "No files to process!")
+        return
+    
+    if pb:
+        pb.start()
+    
+    dataframes = []
+    failed_files = []
+    time_sources = {}
+    
+    try:
+        total_files = len(file_paths)
+        
+        for i, file_path in enumerate(file_paths):
+            try:
+                print(f"Processing file {i+1}/{total_files}: {os.path.basename(file_path)}")
+                
+                # Update progress if progress bar available
+                if pb:
+                    progress = (i / total_files) * 100
+                    pb['value'] = progress
+                    pb.update()
+                
+                # Process file with flexible time handling
+                df, time_source = process_single_file_with_flexible_time(file_path, selected.get())
+                
+                # Add a source file column to track which file each row came from
+                df['source_file'] = os.path.basename(file_path)
+                
+                dataframes.append(df)
+                time_sources[os.path.basename(file_path)] = time_source
+                print(f"✅ Successfully processed: {os.path.basename(file_path)} ({len(df)} rows, time: {time_source})")
+                
+            except Exception as e:
+                print(f"❌ Error processing {file_path}: {str(e)}")
+                failed_files.append(file_path)
+                continue
+        
+        # Concatenate all successfully processed dataframes
+        if dataframes:
+            # Sort dataframes by their first timestamp to maintain chronological order
+            # Handle both datetime and integer index cases
+            def get_sort_key(df):
+                try:
+                    return df['time'].min()
+                except:
+                    return 0  # Fallback for integer indices
+            
+            dataframes.sort(key=get_sort_key)
+            
+            # Concatenate all dataframes
+            concatenated_df = pd.concat(dataframes, ignore_index=True)
+            
+            # Sort the final dataframe by time to ensure proper chronological order
+            try:
+                concatenated_df.sort_values('time', inplace=True)
+                concatenated_df.reset_index(drop=True, inplace=True)
+            except:
+                print("⚠️ Could not sort by time (may be using index-based time)")
+            
+            # Update the global dataframe
+            update_df_main(concatenated_df)
+            
+            # Populate the listbox with column names
+            populate_listbox(listbox, concatenated_df)
+            
+            # Update slider ranges if GUI instance is available
+            if gui_instance is not None:
+                gui_instance.update_slider_ranges_after_load()
+            
+            # Show comprehensive summary
+            total_rows = len(concatenated_df)
+            successful_files = len(dataframes)
+            
+            # Create time sources summary
+            time_summary = "\n".join([f"  • {file}: {source}" for file, source in time_sources.items()])
+            
+            try:
+                time_range = f"{concatenated_df['time'].min()} to {concatenated_df['time'].max()}"
+            except:
+                time_range = "Index-based time"
+            
+            summary_message = (
+                f"🎉 Batch Processing Complete!\n\n"
+                f"✅ Successfully processed: {successful_files} files\n"
+                f"📊 Total data points: {total_rows:,}\n"
+                f"⏰ Time range: {time_range}\n\n"
+                f"🕐 Time sources used:\n{time_summary}\n\n"
+                f"📁 Source files tracked in 'source_file' column"
+            )
+            
+            if failed_files:
+                summary_message += f"\n\n❌ Failed files ({len(failed_files)}):\n"
+                summary_message += "\n".join([f"  • {os.path.basename(f)}" for f in failed_files])
+            
+            messagebox.showinfo("Batch Processing Results", summary_message)
+            
+            print(f"🎯 Final concatenated dataframe shape: {concatenated_df.shape}")
+            print(f"📋 Columns: {list(concatenated_df.columns)}")
+            
+        else:
+            messagebox.showerror("Error", "No files were successfully processed!")
+            
+    except Exception as e:
+        messagebox.showerror("Batch Processing Error", f"Error during batch processing: {str(e)}")
+        
+    finally:
+        if pb:
+            pb.stop()
+
+def concatenate_df_flexible(file_path, selected, listbox):
+    """
+    Enhanced version of concatenate_df with flexible time handling.
+    """
+    try:
+        # Process file with flexible time handling
+        df_to_add, time_source = process_single_file_with_flexible_time(file_path, selected.get())
+        
+        # Add source file tracking
+        df_to_add['source_file'] = os.path.basename(file_path)
+        
+        if constants.df_main is not None and not constants.df_main.empty:
+            constants.df_main = pd.concat([constants.df_main, df_to_add], ignore_index=True)
+        else:
+            constants.df_main = df_to_add
+        
+        # Populate the listbox with column names
+        populate_listbox(listbox, constants.df_main)
+        
+        # Show success message
+        messagebox.showinfo("File Added", 
+                          f"✅ File concatenated successfully!\n\n"
+                          f"📁 File: {os.path.basename(file_path)}\n"
+                          f"⏰ Time source: {time_source}\n"
+                          f"📊 Total rows now: {len(constants.df_main):,}")
+        
+        print(constants.df_main)
+        
+    except Exception as e:
+        error_msg = f"Error concatenating file: {str(e)}"
+        messagebox.showerror("Concatenation Error", error_msg)
