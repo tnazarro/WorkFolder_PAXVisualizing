@@ -401,6 +401,20 @@ class PAXView:
         # self.analyze_button.grid(row=2, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
         self.data_info_button.grid(row=2, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
         
+        # # NEW: Extinction coefficient button
+        #Commented out for now as the column creation happens automatically in the new system
+        # self.create_extinction_button = tk.Button(
+        #     self.frame_TL,
+        #     text="🔬 Create Extinction Column",
+        #     command=self.create_extinction_column_manually,
+        #     width=25,
+        #     bg='#e67e22',
+        #     fg='white',
+        #     font=('Arial', 9, 'bold')
+        # )
+        # self.create_extinction_button.grid(row=3, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+
+
         #Unused legacy buttons commented out for now, but can be uncommented if needed
         # # Separator
         # separator = ttk.Separator(self.frame_TL, orient='horizontal')
@@ -643,6 +657,67 @@ class PAXView:
             self.plot_mode_label.config(text=f"Mode: Single Axis ({selection_count} traces)")
         
         self.update_plot_from_sliders()
+
+    def create_extinction_column_manually(self):
+        """
+        Manually create an extinction coefficient column for calibration analysis.
+        Add this method to your PAXView class.
+        """
+        if constants.df_main.empty:
+            messagebox.showwarning("No Data", "Please load data files first!")
+            return
+        
+        try:
+            # Check if extinction column already exists
+            if 'Extinction_Coefficient' in constants.df_main.columns:
+                overwrite = messagebox.askyesno(
+                    "Column Exists", 
+                    "Extinction_Coefficient column already exists.\n\nDo you want to recalculate it?"
+                )
+                if not overwrite:
+                    return
+            
+            # Get current I0 slider values
+            i0_low = int(self.current_valueI0Low.get())
+            i0_high = int(self.current_valueI0High.get())
+            
+            # Validate I0 region
+            if i0_low >= i0_high:
+                messagebox.showerror("Invalid I0 Region", 
+                                f"I0 Low ({i0_low}) must be less than I0 High ({i0_high})")
+                return
+            
+            if i0_high - i0_low < 10:
+                messagebox.showwarning("Small I0 Region", 
+                                    f"I0 region only has {i0_high - i0_low} points. Consider using a larger region for better baseline calculation.")
+            
+            # Create the extinction coefficient column
+            constants.df_main, i0_baseline = calculate_extinction_coefficient(
+                constants.df_main, 
+                i0_low, 
+                i0_high,
+                calculated_column_name='Extinction_Coefficient'
+            )
+            
+            # Update the listbox and highlight the new column
+            update_listbox_with_new_column(self, highlight_column='Extinction_Coefficient')
+            
+            # Show success message
+            success_msg = (
+                f"✅ Extinction Coefficient Created!\n\n"
+                f"📊 I0 Baseline: {i0_baseline:.6f} W\n"
+                f"📈 I0 Region: {i0_low} to {i0_high} ({i0_high - i0_low} points)\n"
+                f"🔬 Column: 'Extinction_Coefficient'\n\n"
+                f"This column can now be used for calibration analysis."
+            )
+            
+            messagebox.showinfo("Success", success_msg)
+            writeToLog(f"Created Extinction_Coefficient column (baseline: {i0_baseline:.6f})", self.log)
+            
+        except Exception as e:
+            error_msg = f"Error creating extinction coefficient column: {str(e)}"
+            messagebox.showerror("Error", error_msg)
+            writeToLog(f"Extinction coefficient error: {str(e)}", self.log)
 
 
 

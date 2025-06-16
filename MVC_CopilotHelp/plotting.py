@@ -3,6 +3,7 @@ from matplotlib.figure import Figure
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 

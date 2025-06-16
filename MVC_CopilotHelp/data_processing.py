@@ -373,3 +373,144 @@ def clear_df():
     """
     constants.df_main = pd.DataFrame()
     constants.df_to_add = pd.DataFrame()
+    
+# ==================== EXTINCTION COEFFICIENT IMPLEMENTATION ====================
+
+import pandas as pd
+import numpy as np
+from tkinter import messagebox
+import constants
+
+def calculate_extinction_coefficient(df, i0_low_idx, i0_high_idx, 
+                                   laser_power_column='Detected Laser power (W)',
+                                   calculated_column_name='Extinction_Coefficient'):
+    """
+    Calculate extinction coefficient using Beer-Lambert law: -ln(I/I0)
+    
+    Parameters:
+    - df: DataFrame containing the data
+    - i0_low_idx: Lower index of I0 region (from slider)
+    - i0_high_idx: Higher index of I0 region (from slider)
+    - laser_power_column: Column containing laser power measurements
+    - calculated_column_name: Name for the new calculated column
+    
+    Returns:
+    - df: DataFrame with new calculated column added
+    - i0_mean: Baseline value used for calculation
+    """
+    
+    # Validate inputs
+    if laser_power_column not in df.columns:
+        # Try alternative column names
+        alt_names = [
+            'Detected Laser Power (W)', 
+            'Laser Power (W)'
+        ]
+        found_col = None
+        for alt_name in alt_names:
+            if alt_name in df.columns:
+                laser_power_column = alt_name
+                found_col = alt_name
+                break
+        
+        if not found_col:
+            available_cols = [col for col in df.columns if 'laser' in col.lower() or 'power' in col.lower()]
+            raise ValueError(f"Laser power column not found. Available power-related columns: {available_cols}")
+    
+    if i0_low_idx >= len(df) or i0_high_idx >= len(df) or i0_low_idx >= i0_high_idx:
+        raise ValueError(f"Invalid I0 region indices: {i0_low_idx} to {i0_high_idx} (dataframe length: {len(df)})")
+    
+    # Calculate I0 baseline (mean of clean air region)
+    i0_region_data = df[laser_power_column].iloc[i0_low_idx:i0_high_idx]
+    i0_mean = i0_region_data.mean()
+    
+    if pd.isna(i0_mean) or i0_mean <= 0:
+        raise ValueError(f"Invalid I0 baseline calculated: {i0_mean}. Check I0 region data quality.")
+    
+    # Calculate extinction coefficient using Beer-Lambert law: -ln(I/I0)
+    # Add small epsilon to prevent log(0) errors
+    epsilon = 1e-10
+    current_power = df[laser_power_column] + epsilon
+    baseline_power = i0_mean + epsilon
+    
+    # Ensure we don't take log of negative or zero values
+    intensity_ratio = np.maximum(current_power / baseline_power, epsilon)
+    
+    # Calculate extinction coefficient
+    df[calculated_column_name] = -(1/.354) * np.log(intensity_ratio) * 1000000  # Convert to 1/Mm
+    
+    print(f"✅ Created extinction coefficient column: '{calculated_column_name}'")
+    print(f"📊 I0 baseline: {i0_mean:.6f} W")
+    print(f"📈 I0 region: indices {i0_low_idx} to {i0_high_idx} ({i0_high_idx - i0_low_idx} points)")
+    print(f"📉 Extinction range: {df[calculated_column_name].min():.6f} to {df[calculated_column_name].max():.6f}")
+    
+    return df, i0_mean
+
+def create_extinction_column_if_needed(gui_instance):
+    """
+    Check if 'Debug Ext Calculation' exists, if not, create extinction coefficient column.
+    
+    Parameters:
+    - gui_instance: Reference to the PAXView GUI instance
+    
+    Returns:
+    - column_name: Name of the column to use for calibration analysis
+    - is_calculated: Boolean indicating if we created a calculated column
+    - i0_baseline: Baseline value used (None if using existing column)
+    """
+    
+    if constants.df_main.empty:
+        raise ValueError("No data loaded")
+    
+    # Check if the original debug column exists
+    debug_col = 'Debug Ext Calculation'
+    if debug_col in constants.df_main.columns:
+        print(f"✅ Using existing '{debug_col}' column")
+        return debug_col, False, None
+    
+    # Column doesn't exist, create extinction coefficient column
+    print(f"⚠️ '{debug_col}' not found - creating extinction coefficient column")
+    
+    try:
+        # Get current I0 slider values
+        i0_low = int(gui_instance.current_valueI0Low.get())
+        i0_high = int(gui_instance.current_valueI0High.get())
+        
+        # Create the extinction coefficient column
+        constants.df_main, i0_baseline = calculate_extinction_coefficient(
+            constants.df_main, 
+            i0_low, 
+            i0_high, 
+            calculated_column_name='Extinction_Coefficient'
+        )
+        
+        return 'Extinction_Coefficient', True, i0_baseline
+        
+    except Exception as e:
+        raise ValueError(f"Error creating extinction coefficient column: {str(e)}")
+
+def update_listbox_with_new_column(gui_instance, highlight_column=None):
+    """
+    Update the listbox to show all columns, optionally highlighting a specific column.
+    
+    Parameters:
+    - gui_instance: Reference to the PAXView GUI instance
+    - highlight_column: Column name to highlight (optional)
+    """
+    gui_instance.listbox.delete(0, 'end')
+    i = 0
+    excluded_columns = ['Alarm', 'time', 'source_file']
+    
+    for column in constants.df_main.columns:
+        if column not in excluded_columns:
+            gui_instance.listbox.insert(i, column)
+            
+            # Regular alternating background
+            if (i % 2) == 0:
+                gui_instance.listbox.itemconfigure(i, background='#f0f0f0')
+            
+            # Highlight the specified column
+            if column == highlight_column:
+                gui_instance.listbox.itemconfigure(i, background='#90EE90', foreground='#006400')  # Light green with dark green text
+            
+            i += 1
