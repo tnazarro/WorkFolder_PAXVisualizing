@@ -661,7 +661,6 @@ class PAXView:
     def create_extinction_column_manually(self):
         """
         Manually create an extinction coefficient column for calibration analysis.
-        Add this method to your PAXView class.
         """
         if constants.df_main.empty:
             messagebox.showwarning("No Data", "Please load data files first!")
