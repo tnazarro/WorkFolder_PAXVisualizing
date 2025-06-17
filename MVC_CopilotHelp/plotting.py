@@ -194,6 +194,7 @@ def plot_data_subplots(df, selection, fig, subplot_mode=False, xloc1=0, xloc2=10
         if len(selection) > 1:
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 
+#Old
 def plot_big5(df, parent_window):
 	"""
 	Plot the 'Big 5' measurements in a new Tkinter window.
@@ -246,6 +247,7 @@ def plot_big5(df, parent_window):
 	toolbar.update()
 	toolbar.pack()
 
+#Old
 def plot_4x(df, parent_window):
 	"""
 	Create a 4x4 sanity check plot in a new Tkinter window.

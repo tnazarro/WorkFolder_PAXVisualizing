@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 from scipy.stats import linregress
 
-from data_processing import create_extinction_column_if_needed, update_listbox_with_new_column
+from data_processing import create_extinction_column_if_needed, update_listbox_with_new_column, enhanced_calibration_analysis
 from constants import *
 
 class ModernCalibrationWindow:
@@ -373,9 +373,9 @@ class ModernCalibrationWindow:
             
             # Run analysis based on calibration mode
             if calib_mode == 'Scattering':
-                self.modified_analyze_scattering_mode(df, xlocA, xlocB, min_val, max_val, percent)
+                self.analyze_scattering_mode(df, xlocA, xlocB, min_val, max_val, percent)
             elif calib_mode == 'Absorbing':
-                self.modified_analyze_absorbing_mode(df, xlocA, xlocB, min_val, max_val, percent)
+                self.analyze_absorbing_mode(df, xlocA, xlocB, min_val, max_val, percent)
             else:
                 messagebox.showerror("Error", "Please select a calibration mode (Scattering or Absorbing)")
                 return
@@ -401,14 +401,14 @@ class ModernCalibrationWindow:
             messagebox.showerror("Input Error", "Please ensure all calibration parameters are valid numbers")
             return False
             
-    def modified_analyze_scattering_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
+    def analyze_scattering_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
         """
-        Modified scattering analysis that uses extinction coefficient if needed.
-        Replace the analyze_scattering_mode method in ModernCalibrationWindow.
+        Ultimate enhanced scattering mode analysis with both automatic column creation 
+        and comprehensive debugging.
         """
         
         try:
-            # Determine which column to use for analysis
+            # STEP 1: Handle missing extinction column (from extinction coefficient implementation)
             if 'Debug Ext Calculation' in df.columns:
                 ext_column = 'Debug Ext Calculation'
                 print("📊 Using existing 'Debug Ext Calculation' column")
@@ -417,73 +417,78 @@ class ModernCalibrationWindow:
                 print("🔬 Using calculated 'Extinction_Coefficient' column")
             else:
                 # Try to create extinction coefficient column automatically
-                ext_column, is_calculated, i0_baseline = create_extinction_column_if_needed(self.gui)
-                if is_calculated:
-                    # Update the GUI listbox
-                    update_listbox_with_new_column(self.gui, highlight_column=ext_column)
-                    messagebox.showinfo("Column Created", 
-                                    f"Created '{ext_column}' column for analysis\nI0 Baseline: {i0_baseline:.6f}")
-        
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not determine extinction column: {str(e)}")
-            return
-        
-        # Extract data for the specified range
-        filtered_time = df['time'].iloc[xlocA:xlocB]
-        filtered_dfx = df['Bscat (1/Mm)'].iloc[xlocA:xlocB]
-        filtered_dfy = df[ext_column].iloc[xlocA:xlocB]
-        
-        # Apply percentage change filter
-        y_pct_change = filtered_dfy.pct_change() * 100
-        mask_pct = (y_pct_change.abs() <= percent) | (y_pct_change.isna())
-        
-        filtered_dfy = filtered_dfy[mask_pct]
-        filtered_dfx = filtered_dfx[mask_pct]
-        filtered_time = filtered_time[mask_pct]
-        
-        # Apply min/max filter
-        mask_range = (filtered_dfy >= min_val) & (filtered_dfy <= max_val)
-        filtered_dfx = filtered_dfx[mask_range]
-        filtered_dfy = filtered_dfy[mask_range]
-        filtered_time = filtered_time[mask_range]
-        
-        # Store filtered data
-        self.filtered_x = filtered_dfx
-        self.filtered_y = filtered_dfy
-        self.filtered_time = filtered_time
-        
-        # Perform linear regression
-        if len(filtered_dfx) > 1:
+                try:
+                    from data_processing import create_extinction_column_if_needed, update_listbox_with_new_column
+                    ext_column, is_calculated, i0_baseline = create_extinction_column_if_needed(self.gui)
+                    if is_calculated:
+                        # Update the GUI listbox
+                        update_listbox_with_new_column(self.gui, highlight_column=ext_column)
+                        messagebox.showinfo("Column Created", 
+                                        f"Created '{ext_column}' column for analysis\nI0 Baseline: {i0_baseline:.6f}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not determine extinction column: {str(e)}")
+                    return
+            
+            # STEP 2: Run enhanced analysis with debugging (from long-term solution)
+            filtered_data, debug_info = enhanced_calibration_analysis(
+                df, xlocA, xlocB, min_val, max_val, percent, mode='Scattering'
+            )
+            
+            # STEP 3: Store results for access by other methods
+            self.filtered_x = filtered_data['x']
+            self.filtered_y = filtered_data['y'] 
+            self.filtered_time = filtered_data['time']
+            
+            # STEP 4: Perform linear regression
             from scipy.stats import linregress
-            slope, intercept, r_value, p_value, std_err = linregress(filtered_dfx, filtered_dfy)
-            self.store_results(slope, intercept, r_value, p_value, std_err, len(filtered_dfx))
+            slope, intercept, r_value, p_value, std_err = linregress(
+                filtered_data['x'], filtered_data['y']
+            )
+            self.store_results(slope, intercept, r_value, p_value, std_err, filtered_data['count'])
             
-            # Create regression plot
+            # STEP 5: Create plots
             import seaborn as sns
-            sns.regplot(x=filtered_dfx, y=filtered_dfy, ax=self.ax1, 
+            sns.regplot(x=filtered_data['x'], y=filtered_data['y'], ax=self.ax1, 
                     marker='x', line_kws=dict(color='red'), scatter_kws={'alpha': 0.6})
-            self.ax1.set_xlabel('Bscat (1/Mm)')
-            self.ax1.set_ylabel(f'{ext_column}')
-            self.ax1.set_title(f'Scattering Mode: {ext_column} vs Bscat')
+            self.ax1.set_xlabel(filtered_data['x_column'])
+            self.ax1.set_ylabel(filtered_data['y_column'])
+            self.ax1.set_title(f'Scattering Mode: {filtered_data["count"]} points')
             
-            # Create time series plot
-            self.ax2.scatter(filtered_time, filtered_dfy, alpha=0.6, color='blue', label='Filtered Data')
+            # Time series plot
+            self.ax2.scatter(filtered_data['time'], filtered_data['y'], alpha=0.6, color='blue')
             self.ax2.set_xlabel('Time')
-            self.ax2.set_ylabel(f'{ext_column}')
+            self.ax2.set_ylabel(filtered_data['y_column'])
             self.ax2.set_title('Filtered Data Over Time')
             
-        else:
-            print(len(filtered_dfx))
-            messagebox.showwarning("Warning", "Not enough data points after filtering!")
+            # STEP 6: Show success message with debug info
+            if debug_info['issues']:
+                warning_msg = f"Analysis completed with {len(debug_info['issues'])} warning(s):\n"
+                for issue in debug_info['issues'][:3]:  # Show first 3 issues
+                    warning_msg += f"• {issue}\n"
+                messagebox.showwarning("Analysis Warnings", warning_msg)
+            
+        except ValueError as e:
+            # Show detailed error with recommendations
+            error_msg = f"❌ Scattering Analysis Failed:\n\n{str(e)}\n\n"
+            
+            if 'debug_info' in locals() and debug_info['recommendations']:
+                error_msg += "💡 Recommendations:\n"
+                for rec in debug_info['recommendations'][:3]:
+                    error_msg += f"• {rec}\n"
+            
+            messagebox.showerror("Scattering Analysis Error", error_msg)
+            
+        except Exception as e:
+            messagebox.showerror("Unexpected Error", f"Unexpected error in scattering analysis:\n{str(e)}")
 
-    def modified_analyze_absorbing_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
+    def analyze_absorbing_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
         """
-        Modified absorbing analysis that uses extinction coefficient if needed.
-        Replace the analyze_absorbing_mode method in ModernCalibrationWindow.
+        Ultimate enhanced absorbing mode analysis with both automatic column creation 
+        and comprehensive debugging.
         """
         
         try:
-            # Determine which column to use for analysis
+            # STEP 1: Handle missing extinction column
             if 'Debug Ext Calculation' in df.columns:
                 ext_column = 'Debug Ext Calculation'
                 print("📊 Using existing 'Debug Ext Calculation' column")
@@ -492,67 +497,70 @@ class ModernCalibrationWindow:
                 print("🔬 Using calculated 'Extinction_Coefficient' column")
             else:
                 # Try to create extinction coefficient column automatically
-                ext_column, is_calculated, i0_baseline = create_extinction_column_if_needed(self.gui)
-                if is_calculated:
-                    # Update the GUI listbox
-                    update_listbox_with_new_column(self.gui, highlight_column=ext_column)
-                    messagebox.showinfo("Column Created", 
-                                    f"Created '{ext_column}' column for analysis\nI0 Baseline: {i0_baseline:.6f}")
-        
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not determine extinction column: {str(e)}")
-            return
-        
-        # Extract data for the specified range
-        filtered_time = df['time'].iloc[xlocA:xlocB]
-        filtered_dfx = df['Babs (1/Mm)'].iloc[xlocA:xlocB]
-        
-        # Calculate difference (extinction coefficient - Bscat)
-        difference_dfy = (df[ext_column].iloc[xlocA:xlocB] - 
-                        df['Bscat (1/Mm)'].iloc[xlocA:xlocB])
-        
-        # Apply percentage change filter
-        y_pct_change = difference_dfy.pct_change() * 100
-        mask_pct = (y_pct_change.abs() <= percent) | (y_pct_change.isna())
-        
-        filtered_dfy = difference_dfy[mask_pct]
-        filtered_dfx = filtered_dfx[mask_pct]
-        filtered_time = filtered_time[mask_pct]
-        
-        # Apply min/max filter
-        mask_range = (filtered_dfy >= min_val) & (filtered_dfy <= max_val)
-        filtered_dfx = filtered_dfx[mask_range]
-        filtered_dfy = filtered_dfy[mask_range]
-        filtered_time = filtered_time[mask_range]
-        
-        # Store filtered data
-        self.filtered_x = filtered_dfx
-        self.filtered_y = filtered_dfy
-        self.filtered_time = filtered_time
-        
-        # Perform linear regression
-        if len(filtered_dfx) > 1:
+                try:
+                    from data_processing import create_extinction_column_if_needed, update_listbox_with_new_column
+                    ext_column, is_calculated, i0_baseline = create_extinction_column_if_needed(self.gui)
+                    if is_calculated:
+                        # Update the GUI listbox
+                        update_listbox_with_new_column(self.gui, highlight_column=ext_column)
+                        messagebox.showinfo("Column Created", 
+                                        f"Created '{ext_column}' column for analysis\nI0 Baseline: {i0_baseline:.6f}")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Could not determine extinction column: {str(e)}")
+                    return
+            
+            # STEP 2: Run enhanced analysis with debugging
+            filtered_data, debug_info = enhanced_calibration_analysis(
+                df, xlocA, xlocB, min_val, max_val, percent, mode='Absorbing'
+            )
+            
+            # STEP 3: Store results
+            self.filtered_x = filtered_data['x']
+            self.filtered_y = filtered_data['y']
+            self.filtered_time = filtered_data['time']
+            
+            # STEP 4: Perform linear regression
             from scipy.stats import linregress
-            slope, intercept, r_value, p_value, std_err = linregress(filtered_dfx, filtered_dfy)
-            self.store_results(slope, intercept, r_value, p_value, std_err, len(filtered_dfx))
+            slope, intercept, r_value, p_value, std_err = linregress(
+                filtered_data['x'], filtered_data['y']
+            )
+            self.store_results(slope, intercept, r_value, p_value, std_err, filtered_data['count'])
             
-            # Create regression plot
+            # STEP 5: Create plots  
             import seaborn as sns
-            sns.regplot(x=filtered_dfx, y=filtered_dfy, ax=self.ax1, 
+            sns.regplot(x=filtered_data['x'], y=filtered_data['y'], ax=self.ax1,
                     marker='x', line_kws=dict(color='red'), scatter_kws={'alpha': 0.6})
-            self.ax1.set_xlabel('Babs (1/Mm)')
-            self.ax1.set_ylabel(f'{ext_column} - Scat Difference')
-            self.ax1.set_title(f'Absorbing Mode: {ext_column} - Scat vs Babs')
+            self.ax1.set_xlabel(filtered_data['x_column'])
+            self.ax1.set_ylabel(filtered_data['y_column'])
+            self.ax1.set_title(f'Absorbing Mode: {filtered_data["count"]} points')
             
-            # Create time series plot
-            self.ax2.scatter(filtered_time, filtered_dfy, alpha=0.6, color='green', label='Filtered Data')
+            # Time series plot
+            self.ax2.scatter(filtered_data['time'], filtered_data['y'], alpha=0.6, color='green')
             self.ax2.set_xlabel('Time')
-            self.ax2.set_ylabel(f'{ext_column} - Scat Difference')
+            self.ax2.set_ylabel(filtered_data['y_column'])
             self.ax2.set_title('Filtered Data Over Time')
             
-        else:
-            print(len(filtered_dfx))
-            messagebox.showwarning("Warning", "Not enough data points after filtering!")    
+            # STEP 6: Show success message with debug info
+            if debug_info['issues']:
+                warning_msg = f"Analysis completed with {len(debug_info['issues'])} warning(s):\n"
+                for issue in debug_info['issues'][:3]:
+                    warning_msg += f"• {issue}\n"
+                messagebox.showwarning("Analysis Warnings", warning_msg)
+            
+        except ValueError as e:
+            # Show detailed error with recommendations
+            error_msg = f"❌ Absorbing Analysis Failed:\n\n{str(e)}\n\n"
+            
+            if 'debug_info' in locals() and debug_info['recommendations']:
+                error_msg += "💡 Recommendations:\n"
+                for rec in debug_info['recommendations'][:3]:
+                    error_msg += f"• {rec}\n"
+            
+            messagebox.showerror("Absorbing Analysis Error", error_msg)
+            
+        except Exception as e:
+            messagebox.showerror("Unexpected Error", f"Unexpected error in absorbing analysis:\n{str(e)}")
+
     def store_results(self, slope, intercept, r_value, p_value, std_err, data_points):
         """Store analysis results"""
         self.analysis_results = {

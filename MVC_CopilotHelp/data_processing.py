@@ -4,6 +4,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 import os
+from datetime import datetime, timedelta
 
 import pandas as pd
 import numpy as np
@@ -676,6 +677,8 @@ def pax_analyzer_flexible(file_path, selected, listbox, gui_instance=None):
         # Process the file with flexible time handling
         df, time_source = process_single_file_with_flexible_time(file_path, selected.get())
         
+        df = fix_pax_data_time_issue(df)
+
         # Add source file tracking
         df['source_file'] = os.path.basename(file_path)
         
@@ -735,6 +738,8 @@ def process_multiple_files_automatically_flexible(file_paths, selected, listbox,
                 # Process file with flexible time handling
                 df, time_source = process_single_file_with_flexible_time(file_path, selected.get())
                 
+                df = fix_pax_data_time_issue(df)
+
                 # Add a source file column to track which file each row came from
                 df['source_file'] = os.path.basename(file_path)
                 
@@ -850,3 +855,330 @@ def concatenate_df_flexible(file_path, selected, listbox):
     except Exception as e:
         error_msg = f"Error concatenating file: {str(e)}"
         messagebox.showerror("Concatenation Error", error_msg)
+
+# ==================== END OF EXTINCTION COEFFICIENT IMPLEMENTATION ====================
+
+# ==================== START OF TIME PARSING FIX ====================
+
+def convert_excel_serial_date(date_serial, time_serial):
+    """
+    Convert Excel serial date and time to proper datetime.
+    """
+    try:
+        # Excel epoch (accounting for the 1900 leap year bug)
+        excel_epoch = datetime(1899, 12, 30)
+        
+        # Convert date
+        date_part = excel_epoch + timedelta(days=int(date_serial))
+        
+        # Convert time (decimal fraction of day to hours/minutes/seconds)
+        time_seconds = time_serial * 24 * 60 * 60
+        time_part = timedelta(seconds=time_seconds)
+        
+        return date_part + time_part
+        
+    except Exception as e:
+        print(f"Warning: Excel date conversion failed: {e}")
+        return None
+
+def create_time_column_enhanced(df):
+    """
+    Enhanced time column creation that handles Excel serial dates.
+    """
+    
+    time_series = None
+    time_source = "unknown"
+    
+    # Strategy 1: Try Excel serial date conversion
+    try:
+        if 'Local Date' in df.columns and 'Local Time' in df.columns:
+            # Check if these are numeric (Excel serial dates)
+            first_date = df['Local Date'].iloc[0]
+            first_time = df['Local Time'].iloc[0]
+            
+            if isinstance(first_date, (int, float)) and isinstance(first_time, (int, float)):
+                print("📅 Detected Excel serial date format - converting...")
+                
+                # Convert Excel serial dates to proper datetime
+                datetime_list = []
+                for idx, row in df.iterrows():
+                    dt = convert_excel_serial_date(row['Local Date'], row['Local Time'])
+                    if dt:
+                        datetime_list.append(dt)
+                    else:
+                        # Fallback for failed conversions
+                        datetime_list.append(datetime(2000, 1, 1) + timedelta(seconds=idx))
+                
+                time_series = pd.Series(datetime_list)
+                time_source = "Excel serial date conversion"
+                print(f"✅ Successfully converted Excel serial dates")
+                print(f"Time range: {time_series.min()} to {time_series.max()}")
+                return time_series, time_source
+                
+    except Exception as e:
+        print(f"⚠️ Excel serial date conversion failed: {str(e)}")
+    
+    # Strategy 2: Try standard string datetime conversion
+    try:
+        if 'Local Date' in df.columns and 'Local Time' in df.columns:
+            print("📅 Attempting standard string datetime conversion")
+            time_series = pd.to_datetime(
+                df['Local Date'].astype(str) + ',' + df['Local Time'].astype(str), 
+                format='%Y-%m-%d,%H:%M:%S'
+            )
+            time_source = "String datetime conversion"
+            print(f"✅ Successfully created time from strings")
+            return time_series, time_source
+    except Exception as e:
+        print(f"⚠️ String datetime conversion failed: {str(e)}")
+    
+    # Strategy 3: Fall back to row index
+    print("⚠️ Using row index fallback for time")
+    try:
+        time_series = pd.to_datetime('2000-01-01') + pd.to_timedelta(df.index, unit='s')
+        time_source = "Row index (1-second intervals)"
+        print(f"✅ Created synthetic time from row index")
+        return time_series, time_source
+    except Exception as e:
+        print(f"❌ Even row index fallback failed: {str(e)}")
+        time_series = df.index
+        time_source = "Integer row index"
+        return time_series, time_source
+
+def fix_pax_data_time_issue(df):
+    """
+    Quick fix specifically for PAX data files with Excel serial dates.
+    Call this right after loading your CSV file.
+    """
+    
+    print("🔧 Applying PAX data fixes...")
+    
+    # Fix 1: Convert Excel serial dates to proper datetime
+    time_series, time_source = create_time_column_enhanced(df)
+    df['time'] = time_series
+    print(f"✅ Time column fixed: {time_source}")
+    
+    # Fix 2: Handle column name differences
+    if 'Laser power (W)' in df.columns and 'Detected Laser power (W)' not in df.columns:
+        df['Detected Laser power (W)'] = df['Laser power (W)']
+        print("✅ Added 'Detected Laser power (W)' alias")
+    
+    # Fix 3: Create extinction coefficient if missing Debug Ext Calculation
+    if 'Debug Ext Calculation' not in df.columns:
+        print("⚠️ Missing 'Debug Ext Calculation' - you'll need to create extinction coefficient")
+        print("💡 Use the 'Create Extinction Column' button after loading")
+    
+    return df
+
+def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, mode='Scattering'):
+    """
+    Enhanced calibration analysis with comprehensive debugging and error handling.
+    """
+    
+    print("🔍 Enhanced Calibration Analysis Starting...")
+    print("=" * 50)
+    
+    debug_info = {
+        'step_counts': {},
+        'issues': [],
+        'recommendations': [],
+        'data_stats': {}
+    }
+    
+    # Step 1: Validate inputs and data
+    print(f"📊 Step 1: Input Validation")
+    print(f"Mode: {mode}")
+    print(f"Calibration region: {xlocA} to {xlocB}")
+    print(f"Range filter: {min_val} to {max_val}")
+    print(f"Percentage limit: {percent}%")
+    
+    if xlocA >= xlocB:
+        error_msg = f"Invalid calibration region: start ({xlocA}) >= end ({xlocB})"
+        debug_info['issues'].append(error_msg)
+        raise ValueError(error_msg)
+    
+    if xlocB >= len(df):
+        error_msg = f"Calibration end ({xlocB}) exceeds data length ({len(df)})"
+        debug_info['issues'].append(error_msg)
+        debug_info['recommendations'].append(f"Set calibration end to < {len(df)}")
+        raise ValueError(error_msg)
+    
+    region_size = xlocB - xlocA
+    debug_info['step_counts']['region_size'] = region_size
+    
+    if region_size < 10:
+        warning = f"Small calibration region ({region_size} points)"
+        debug_info['issues'].append(warning)
+        debug_info['recommendations'].append("Consider expanding calibration region")
+    
+    # Step 2: Determine extinction column
+    print(f"\n🔬 Step 2: Extinction Column Detection")
+    
+    ext_column = None
+    if 'Debug Ext Calculation' in df.columns:
+        ext_column = 'Debug Ext Calculation'
+        print(f"✅ Using existing '{ext_column}'")
+    elif 'Extinction_Coefficient' in df.columns:
+        ext_column = 'Extinction_Coefficient'
+        print(f"✅ Using calculated '{ext_column}'")
+    else:
+        error_msg = "No extinction column found - need to create extinction coefficient first"
+        debug_info['issues'].append(error_msg)
+        debug_info['recommendations'].append("Create extinction coefficient using I0 baseline")
+        
+        # Try to find laser power column for guidance
+        laser_columns = ['Detected Laser power (W)', 'Laser power (W)', 'Detected Laser Power (W)']
+        found_laser = None
+        for col in laser_columns:
+            if col in df.columns:
+                found_laser = col
+                break
+        
+        if found_laser:
+            debug_info['recommendations'].append(f"Use '{found_laser}' to calculate extinction coefficient")
+        
+        raise ValueError(error_msg)
+    
+    # Step 3: Extract calibration region data
+    print(f"\n🎯 Step 3: Data Extraction")
+    
+    try:
+        filtered_time = df['time'].iloc[xlocA:xlocB] if 'time' in df.columns else df.index[xlocA:xlocB]
+        filtered_dfx = df['Bscat (1/Mm)'].iloc[xlocA:xlocB]
+        
+        if mode == 'Scattering':
+            filtered_dfy = df[ext_column].iloc[xlocA:xlocB]
+            y_column_name = ext_column
+        else:  # Absorbing mode
+            filtered_dfy = (df[ext_column].iloc[xlocA:xlocB] - 
+                           df['Bscat (1/Mm)'].iloc[xlocA:xlocB])
+            y_column_name = f"{ext_column} - Bscat"
+        
+        initial_count = len(filtered_dfy)
+        debug_info['step_counts']['initial'] = initial_count
+        
+        print(f"✅ Extracted {initial_count} points")
+        print(f"X-data (Bscat) range: {filtered_dfx.min():.3f} to {filtered_dfx.max():.3f}")
+        print(f"Y-data ({y_column_name}) range: {filtered_dfy.min():.6f} to {filtered_dfy.max():.6f}")
+        
+        # Store data statistics
+        debug_info['data_stats'] = {
+            'x_min': float(filtered_dfx.min()),
+            'x_max': float(filtered_dfx.max()),
+            'y_min': float(filtered_dfy.min()),
+            'y_max': float(filtered_dfy.max()),
+            'y_mean': float(filtered_dfy.mean()),
+            'y_std': float(filtered_dfy.std())
+        }
+        
+    except Exception as e:
+        error_msg = f"Data extraction failed: {str(e)}"
+        debug_info['issues'].append(error_msg)
+        raise ValueError(error_msg)
+    
+    # Step 4: Apply percentage change filter
+    print(f"\n📈 Step 4: Percentage Change Filter")
+    
+    y_pct_change = filtered_dfy.pct_change() * 100
+    
+    # Handle the first NaN value from pct_change
+    mask_pct = (y_pct_change.abs() <= percent) | (y_pct_change.isna())
+    
+    filtered_dfy_pct = filtered_dfy[mask_pct]
+    filtered_dfx_pct = filtered_dfx[mask_pct]
+    filtered_time_pct = filtered_time[mask_pct]
+    
+    after_pct_count = len(filtered_dfy_pct)
+    debug_info['step_counts']['after_percent'] = after_pct_count
+    
+    print(f"Points before: {initial_count}")
+    print(f"Points after: {after_pct_count}")
+    print(f"Points removed: {initial_count - after_pct_count}")
+    
+    if after_pct_count == 0:
+        # Analyze percentage changes to give better recommendations
+        pct_changes_valid = y_pct_change.dropna()
+        if len(pct_changes_valid) > 0:
+            max_pct = pct_changes_valid.abs().max()
+            p95_pct = pct_changes_valid.abs().quantile(0.95)
+            
+            error_msg = f"All points removed by percentage change filter ({percent}%)"
+            debug_info['issues'].append(error_msg)
+            debug_info['recommendations'].append(f"Increase percentage limit to at least {max_pct:.1f}%")
+            debug_info['recommendations'].append(f"Recommended: {p95_pct:.1f}% (95th percentile)")
+            
+            print(f"❌ {error_msg}")
+            print(f"Max percentage change: {max_pct:.2f}%")
+            print(f"95th percentile: {p95_pct:.2f}%")
+        
+        raise ValueError("No data points survived percentage change filter")
+    
+    # Step 5: Apply range filter
+    print(f"\n📊 Step 5: Range Filter")
+    
+    mask_range = (filtered_dfy_pct >= min_val) & (filtered_dfy_pct <= max_val)
+    
+    filtered_dfx_final = filtered_dfx_pct[mask_range]
+    filtered_dfy_final = filtered_dfy_pct[mask_range]
+    filtered_time_final = filtered_time_pct[mask_range]
+    
+    final_count = len(filtered_dfy_final)
+    debug_info['step_counts']['final'] = final_count
+    
+    print(f"Points before: {after_pct_count}")
+    print(f"Points after: {final_count}")
+    print(f"Points removed: {after_pct_count - final_count}")
+    
+    if final_count == 0:
+        data_min = filtered_dfy_pct.min()
+        data_max = filtered_dfy_pct.max()
+        
+        error_msg = f"All points removed by range filter ({min_val} to {max_val})"
+        debug_info['issues'].append(error_msg)
+        
+        # Provide specific recommendations based on data range
+        if data_max < min_val:
+            debug_info['recommendations'].append(f"Lower min value to below {data_max:.3f}")
+        elif data_min > max_val:
+            debug_info['recommendations'].append(f"Raise max value to above {data_min:.3f}")
+        else:
+            debug_info['recommendations'].append(f"Expand range to {data_min:.3f} to {data_max:.3f}")
+        
+        print(f"❌ {error_msg}")
+        print(f"Data actually ranges from {data_min:.6f} to {data_max:.6f}")
+        
+        raise ValueError("No data points survived range filter")
+    
+    # Step 6: Final validation
+    print(f"\n✅ Step 6: Final Results")
+    print(f"Final data points: {final_count}")
+    print(f"Data retention: {(final_count/initial_count*100):.1f}%")
+    
+    if final_count < 5:
+        warning = f"Very few points remaining ({final_count}) - regression may be unreliable"
+        debug_info['issues'].append(warning)
+        debug_info['recommendations'].append("Consider relaxing filter parameters")
+    
+    # Calculate correlation for quality assessment
+    if final_count > 1:
+        correlation = np.corrcoef(filtered_dfx_final, filtered_dfy_final)[0, 1]
+        debug_info['data_stats']['correlation'] = float(correlation)
+        print(f"Correlation: {correlation:.3f}")
+        
+        if abs(correlation) < 0.1:
+            debug_info['issues'].append("Very low correlation between X and Y data")
+    
+    # Return the filtered data
+    filtered_data = {
+        'x': filtered_dfx_final,
+        'y': filtered_dfy_final,
+        'time': filtered_time_final,
+        'count': final_count,
+        'x_column': 'Bscat (1/Mm)',
+        'y_column': y_column_name
+    }
+    
+    print("=" * 50)
+    print("🎉 Analysis completed successfully!")
+    
+    return filtered_data, debug_info

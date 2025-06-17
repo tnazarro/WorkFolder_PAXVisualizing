@@ -24,7 +24,13 @@ from data_processing import (
     clearNaN,
     update_df_main,
     update_df_to_add,
-    pax_analyzer_flexible
+    pax_analyzer_flexible,
+    process_multiple_files_automatically_flexible,
+    enhanced_calibration_analysis,
+    fix_pax_data_time_issue,
+    calculate_extinction_coefficient,
+    create_extinction_column_if_needed,
+    update_listbox_with_new_column
 )
 from controller import resource_path, alarm_translate, writeToLog
 from plotting import *
@@ -390,6 +396,17 @@ class PAXView:
             font=('Arial', 8, 'bold')
         )
         
+        self.debug_button = tk.Button(
+            self.frame_TL,
+            text="🔍 Debug Calibration",
+            command=self.debug_current_calibration,
+            width=25,
+            bg='#e74c3c',
+            fg='white',
+            font=('Arial', 9, 'bold')
+        )
+        self.debug_button.grid(row=3, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
+
         # Layout the components
         # self.load_single_button.grid(row=0, column=0, columnspan=3, pady=2, padx=2, sticky='ew') #Commented out to avoid confusion with the new multi-file button
         self.load_multiple_button.grid(row=0, column=0, columnspan=3, pady=2, padx=2, sticky='ew')
@@ -659,6 +676,7 @@ class PAXView:
         
         self.update_plot_from_sliders()
 
+    #Possibly move this to data_processing.py if it is more relevant there
     def create_extinction_column_manually(self):
         """
         Manually create an extinction coefficient column for calibration analysis.
@@ -719,6 +737,69 @@ class PAXView:
             messagebox.showerror("Error", error_msg)
             writeToLog(f"Extinction coefficient error: {str(e)}", self.log)
 
+    def debug_current_calibration(self):
+        """
+        Debug current calibration settings.
+        """
+        
+        if constants.df_main.empty:
+            messagebox.showwarning("No Data", "Please load data first!")
+            return
+        
+        try:
+            # Get current settings
+            min_val = float(self.entry_min.get()) if self.entry_min.get() else 0
+            max_val = float(self.entry_max.get()) if self.entry_max.get() else 100
+            percent = float(self.entry_percent.get()) if self.entry_percent.get() else 10
+            mode = self.calibvar.get()
+            xlocA = int(self.current_valueCalibLow.get())
+            xlocB = int(self.current_valueCalibHigh.get())
+            
+            print(f"\n🔧 Debugging Calibration Settings:")
+            print(f"Mode: {mode}")
+            print(f"Range: {min_val} to {max_val}")
+            print(f"Percentage limit: {percent}%")
+            print(f"Calibration region: {xlocA} to {xlocB}")
+            
+            # Run the enhanced analysis in debug mode
+            try:
+                filtered_data, debug_info = enhanced_calibration_analysis(
+                    constants.df_main, xlocA, xlocB, min_val, max_val, percent, mode
+                )
+                
+                # Show success summary
+                summary = f"✅ Debug Analysis Complete!\n\n"
+                summary += f"Final data points: {filtered_data['count']}\n"
+                summary += f"Data retention: {(filtered_data['count']/debug_info['step_counts']['initial']*100):.1f}%\n"
+                
+                if 'correlation' in debug_info['data_stats']:
+                    summary += f"Correlation: {debug_info['data_stats']['correlation']:.3f}\n"
+                
+                if debug_info['issues']:
+                    summary += f"\n⚠️ Issues found:\n"
+                    for issue in debug_info['issues'][:3]:
+                        summary += f"• {issue}\n"
+                
+                if debug_info['recommendations']:
+                    summary += f"\n💡 Recommendations:\n"
+                    for rec in debug_info['recommendations'][:3]:
+                        summary += f"• {rec}\n"
+                
+                messagebox.showinfo("Debug Results", summary)
+                
+            except ValueError as e:
+                # Show detailed error analysis
+                error_summary = f"❌ Calibration Debug Failed:\n\n{str(e)}\n\n"
+                
+                if 'debug_info' in locals() and debug_info['recommendations']:
+                    error_summary += "💡 Recommendations:\n"
+                    for rec in debug_info['recommendations']:
+                        error_summary += f"• {rec}\n"
+                
+                messagebox.showerror("Debug Error", error_summary)
+            
+        except Exception as e:
+            messagebox.showerror("Debug Failed", f"Error during debugging:\n{str(e)}")
 
 
 def create_modern_calibration_window(parent_window, gui_instance, constants_module):
