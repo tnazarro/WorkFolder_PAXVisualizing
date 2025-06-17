@@ -473,6 +473,7 @@ class ModernCalibrationWindow:
             self.ax2.set_title('Filtered Data Over Time')
             
         else:
+            print(len(filtered_dfx))
             messagebox.showwarning("Warning", "Not enough data points after filtering!")
 
     def modified_analyze_absorbing_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
@@ -550,6 +551,7 @@ class ModernCalibrationWindow:
             self.ax2.set_title('Filtered Data Over Time')
             
         else:
+            print(len(filtered_dfx))
             messagebox.showwarning("Warning", "Not enough data points after filtering!")    
     def store_results(self, slope, intercept, r_value, p_value, std_err, data_points):
         """Store analysis results"""
