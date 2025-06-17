@@ -1,0 +1,17 @@
+PAX Calibration Analysis Notes
+    Generated: 2025-06-17 12:13:14
+    ==================================================
+
+    ANALYSIS PARAMETERS:
+    Mode: Scattering
+    Min Value: 4000
+    Max Value: 25000
+    % Change Limit: 5%
+    Calibration Start: 115
+    Calibration End: 777
+    Total Data Points: 905
+    Time Range: 00:01:55 - 00:12:57
+
+    CUSTOM NOTES:
+    Test, writing custom notes
+    

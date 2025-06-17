@@ -84,7 +84,7 @@ class ModernCalibrationWindow:
 
         # Create all sections in the scrollable frame
         self.create_header_section(scrollable_frame)
-        self.create_parameters_section(scrollable_frame)
+        self.create_parameters_section_with_notes(scrollable_frame)
         self.create_plots_section(scrollable_frame)
         self.create_results_section(scrollable_frame)
         self.create_action_buttons(scrollable_frame)
@@ -124,22 +124,37 @@ class ModernCalibrationWindow:
         )
         self.status_label.pack()
         
-    def create_parameters_section(self, parent=None):
-        """Create the parameters display section"""
+    def create_parameters_section_with_notes(self, parent=None):
+        """
+        Enhanced parameters section with notes area.
+        """
         if parent is None:
             parent = self.calib_window
+        
         params_frame = ttk.LabelFrame(
             parent, 
-            text="📊 Analysis Parameters", 
+            text="📊 Analysis Parameters & Notes", 
             padding="15"
         )
         params_frame.pack(fill="x", padx=10, pady=10)
         
+        # Create main container with two columns
+        main_container = tk.Frame(params_frame)
+        main_container.pack(fill="x", expand=True)
+        
+        # Configure column weights for proper resizing
+        main_container.columnconfigure(0, weight=2)  # Parameters get more space
+        main_container.columnconfigure(1, weight=1)  # Notes get less space
+        
+        # LEFT SIDE: Parameters (existing functionality)
+        params_left_frame = tk.Frame(main_container)
+        params_left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        
         # Create parameter display in a grid
-        params_grid = tk.Frame(params_frame)
+        params_grid = tk.Frame(params_left_frame)
         params_grid.pack(fill="x")
         
-        # Parameters from GUI
+        # Parameters from GUI (same as before)
         self.create_parameter_display(params_grid, "Calibration Mode:", 
                                     lambda: self.gui.calibvar.get(), 0, 0)
         self.create_parameter_display(params_grid, "Min Value:", 
@@ -160,6 +175,9 @@ class ModernCalibrationWindow:
                                     lambda: f"{len(self.constants.df_main)}" if not self.constants.df_main.empty else "0", 1, 2)
         self.create_parameter_display(params_grid, "Selected Range:", 
                                     self.get_time_range_text, 1, 3)
+        
+        # RIGHT SIDE: Notes section (NEW)
+        self.create_notes_section(main_container)
         
     def create_parameter_display(self, parent, label_text, value_func, row, col):
         """Create a parameter display widget"""
@@ -626,3 +644,248 @@ class ModernCalibrationWindow:
                               f"Data Points = {self.analysis_results['data_points']}")
         else:
             messagebox.showwarning("Warning", "No results to export. Run analysis first.")
+    def create_notes_section(self, parent):
+        """
+        Create the notes section with text area and controls.
+        """
+        notes_frame = ttk.LabelFrame(parent, text="📝 Analysis Notes", padding="10")
+        notes_frame.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
+        
+        # Configure the notes frame to expand
+        notes_frame.rowconfigure(1, weight=1)
+        notes_frame.columnconfigure(0, weight=1)
+        
+        # Notes header with timestamp
+        header_frame = tk.Frame(notes_frame)
+        header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+        
+        notes_label = tk.Label(
+            header_frame, 
+            text="Custom Notes:", 
+            font=("Arial", 9, "bold"), 
+            fg="#2c3e50"
+        )
+        notes_label.pack(side="left")
+        
+        # Timestamp label
+        self.notes_timestamp = tk.Label(
+            header_frame, 
+            text="", 
+            font=("Arial", 8), 
+            fg="#7f8c8d"
+        )
+        self.notes_timestamp.pack(side="right")
+        
+        # Text area with scrollbar
+        text_frame = tk.Frame(notes_frame)
+        text_frame.grid(row=1, column=0, sticky="nsew", pady=(0, 5))
+        text_frame.rowconfigure(0, weight=1)
+        text_frame.columnconfigure(0, weight=1)
+        
+        # Text widget
+        self.notes_text = tk.Text(
+            text_frame,
+            width=30,
+            height=8,
+            wrap='word',
+            font=("Arial", 9),
+            bg="#f8f9fa",
+            fg="#2c3e50",
+            relief="sunken",
+            bd=1
+        )
+        self.notes_text.grid(row=0, column=0, sticky="nsew")
+        
+        # Scrollbar for text area
+        notes_scrollbar = tk.Scrollbar(text_frame, orient="vertical", command=self.notes_text.yview)
+        notes_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.notes_text.config(yscrollcommand=notes_scrollbar.set)
+        
+        # Button frame
+        button_frame = tk.Frame(notes_frame)
+        button_frame.grid(row=2, column=0, sticky="ew")
+        
+        # Save button
+        save_btn = tk.Button(
+            button_frame,
+            text="💾 Save Notes",
+            command=self.save_notes,
+            bg="#27ae60",
+            fg="white",
+            font=("Arial", 8, "bold"),
+            relief="flat",
+            padx=15,
+            pady=5
+        )
+        save_btn.pack(side="left", padx=(0, 5))
+        
+        # Load button
+        load_btn = tk.Button(
+            button_frame,
+            text="📂 Load Notes",
+            command=self.load_notes,
+            bg="#3498db",
+            fg="white",
+            font=("Arial", 8, "bold"),
+            relief="flat",
+            padx=15,
+            pady=5
+        )
+        load_btn.pack(side="left", padx=(0, 5))
+        
+        # Clear button
+        clear_btn = tk.Button(
+            button_frame,
+            text="🗑️ Clear",
+            command=self.clear_notes,
+            bg="#e74c3c",
+            fg="white",
+            font=("Arial", 8, "bold"),
+            relief="flat",
+            padx=15,
+            pady=5
+        )
+        clear_btn.pack(side="right")
+        
+        # Auto-save binding
+        self.notes_text.bind('<KeyRelease>', self.on_notes_changed)
+        
+
+    def save_notes(self):
+        """
+        Save notes to a file with timestamp and analysis parameters.
+        """
+        try:
+            from datetime import datetime
+            import os
+            
+            # Get notes content
+            notes_content = self.notes_text.get("1.0", "end-1c")
+            
+            if not notes_content.strip():
+                messagebox.showinfo("Save Notes", "No notes to save.")
+                return
+            
+            # Create notes directory if it doesn't exist
+            notes_dir = "calibration_notes"
+            if not os.path.exists(notes_dir):
+                os.makedirs(notes_dir)
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"calibration_notes_{timestamp}.txt"
+            filepath = os.path.join(notes_dir, filename)
+            
+            # Prepare content with metadata
+            metadata = self.get_analysis_metadata()
+            
+            full_content = f"""PAX Calibration Analysis Notes
+    Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+    {'='*50}
+
+    ANALYSIS PARAMETERS:
+    {metadata}
+
+    CUSTOM NOTES:
+    {notes_content}
+    """
+            
+            # Save to file
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(full_content)
+            
+            # Update timestamp display
+            self.notes_timestamp.config(text=f"Saved: {datetime.now().strftime('%H:%M:%S')}")
+            
+            messagebox.showinfo("Notes Saved", f"Notes saved to:\n{filepath}")
+            
+        except Exception as e:
+            messagebox.showerror("Save Error", f"Error saving notes: {str(e)}")
+
+    def load_notes(self):
+        """
+        Load notes from a file.
+        """
+        try:
+            from tkinter import filedialog
+            import os
+            
+            # Set initial directory to notes folder if it exists
+            initial_dir = "calibration_notes" if os.path.exists("calibration_notes") else "."
+            
+            filepath = filedialog.askopenfilename(
+                title="Load Calibration Notes",
+                initialdir=initial_dir,
+                filetypes=[
+                    ("Text files", "*.txt"),
+                    ("All files", "*.*")
+                ]
+            )
+            
+            if filepath:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Extract just the notes section if it's a full metadata file
+                if "CUSTOM NOTES:" in content:
+                    notes_start = content.find("CUSTOM NOTES:") + len("CUSTOM NOTES:")
+                    notes_content = content[notes_start:].strip()
+                else:
+                    notes_content = content
+                
+                # Load into text widget
+                self.notes_text.delete("1.0", "end")
+                self.notes_text.insert("1.0", notes_content)
+                
+                # Update timestamp
+                from datetime import datetime
+                self.notes_timestamp.config(text=f"Loaded: {datetime.now().strftime('%H:%M:%S')}")
+                
+        except Exception as e:
+            messagebox.showerror("Load Error", f"Error loading notes: {str(e)}")
+
+    def clear_notes(self):
+        """
+        Clear the notes text area.
+        """
+        if self.notes_text.get("1.0", "end-1c").strip():
+            if messagebox.askyesno("Clear Notes", "Are you sure you want to clear all notes?"):
+                self.notes_text.delete("1.0", "end")
+                self.notes_timestamp.config(text="")
+
+    def on_notes_changed(self, event=None):
+        """
+        Handle notes text changes (for auto-save indication).
+        """
+        from datetime import datetime
+        self.notes_timestamp.config(text=f"Modified: {datetime.now().strftime('%H:%M:%S')}")
+
+    def get_analysis_metadata(self):
+        """
+        Get current analysis parameters as formatted text.
+        """
+        try:
+            metadata = f"""Mode: {self.gui.calibvar.get()}
+    Min Value: {self.gui.entry_min.get()}
+    Max Value: {self.gui.entry_max.get()}
+    % Change Limit: {self.gui.entry_percent.get()}%
+    Calibration Start: {int(self.gui.current_valueCalibLow.get())}
+    Calibration End: {int(self.gui.current_valueCalibHigh.get())}
+    Total Data Points: {len(self.constants.df_main) if not self.constants.df_main.empty else 0}
+    Time Range: {self.get_time_range_text()}"""
+
+            # Add results if available
+            if hasattr(self, 'analysis_results') and self.analysis_results:
+                metadata += f"""
+
+    ANALYSIS RESULTS:
+    R² Value: {self.analysis_results['r2']:.4f}
+    Slope: {self.analysis_results['slope']:.4f}
+    Intercept: {self.analysis_results['intercept']:.4f}
+    P-Value: {self.analysis_results['p_value']:.4f}
+    Data Points: {self.analysis_results['data_points']}"""
+            
+            return metadata
+            
+        except Exception as e:
+            return f"Error generating metadata: {str(e)}"

@@ -311,6 +311,48 @@ class PAXView:
         self.listbox.pack(side="left", fill="y")
         self.scrollbar.pack(side="right", fill="y")
 
+        self.stored_selection = ()  # Initialize storage
+        
+        # Bind to preserve selection during focus changes
+        self.entry_min.bind('<FocusIn>', self.on_entry_focus_in)
+        self.entry_min.bind('<FocusOut>', self.on_entry_focus_out)
+        
+        self.entry_max.bind('<FocusIn>', self.on_entry_focus_in)
+        self.entry_max.bind('<FocusOut>', self.on_entry_focus_out)
+        
+        self.entry_percent.bind('<FocusIn>', self.on_entry_focus_in)
+        self.entry_percent.bind('<FocusOut>', self.on_entry_focus_out)
+
+    def on_entry_focus_in(self, event=None):
+        """Store selection when entry widget gets focus."""
+        current_selection = self.listbox.curselection()
+        if current_selection:
+            self.stored_selection = current_selection
+            print(f"💾 Stored selection on FocusIn: {current_selection}")
+
+    def on_entry_focus_out(self, event=None):
+        """Restore selection when entry widget loses focus."""
+        current_selection = self.listbox.curselection()
+        print(f"🔍 FocusOut - Current: {current_selection}, Stored: {self.stored_selection}")
+        
+        # If we lost selection but have a stored one, restore it
+        if not current_selection and self.stored_selection:
+            print(f"🔧 Restoring selection: {self.stored_selection}")
+            # Use a small delay to ensure focus change is complete
+            self.root.after(10, lambda: self.restore_stored_selection())
+
+    def restore_stored_selection(self):
+        """Restore the stored selection."""
+        if self.stored_selection:
+            try:
+                self.listbox.selection_clear(0, 'end')
+                for index in self.stored_selection:
+                    if index < self.listbox.size():
+                        self.listbox.selection_set(index)
+                print(f"✅ Successfully restored selection: {self.stored_selection}")
+            except Exception as e:
+                print(f"❌ Failed to restore selection: {e}")
+
     def create_enhanced_topleft_frame(self, root):
         """
         Enhanced version of the top-left frame with multi-file loading capabilities.
@@ -630,9 +672,15 @@ class PAXView:
 
     def update_plot_from_sliders(self):
         """
-        REPLACE existing update_plot_from_sliders method with this enhanced version.
+        Enhanced version that preserves listbox selection.
         """
-        if constants.df_main.empty or not self.listbox.curselection():
+        if constants.df_main.empty:
+            return
+        
+        # Store current selection BEFORE any updates
+        current_selection = self.preserve_listbox_selection()
+        
+        if not current_selection:
             return
         
         # Get current slider values as indices
@@ -641,12 +689,12 @@ class PAXView:
         calib_low = int(self.current_valueCalibLow.get())
         calib_high = int(self.current_valueCalibHigh.get())
         
-        # Use the new subplot-aware plotting function
+        # Use the plotting function
         plot_data_subplots(
             constants.df_main,
-            self.listbox.curselection(),
+            current_selection,  # Use stored selection
             self.main_plot.get_figure(),
-            self.subplot_mode.get(),  # Pass the subplot mode
+            self.subplot_mode.get(),
             i0_low,
             i0_high,
             calib_low,
@@ -655,14 +703,20 @@ class PAXView:
         
         # Redraw the canvas
         self.canvas.draw()
+        
+        # Ensure selection is maintained after plot update
+        if current_selection:
+            self.root.after(10, lambda: self.restore_listbox_selection(current_selection))
 
     def on_listbox_select(self, event):
         """
         REPLACE existing on_listbox_select method with this enhanced version.
         """
-        if constants.df_main.empty or not self.listbox.curselection():
-            messagebox.showerror("Error", "No data to plot or no selection made")
-            return
+        
+        #Error alert if no data is loaded or no selection is made; commented out for now due to focus logic for listbox
+        # if constants.df_main.empty or not self.listbox.curselection():
+        #     messagebox.showerror("Error", "No data to plot or no selection made")
+        #     return
         
         # Update the plot mode label based on selection count
         selection_count = len(self.listbox.curselection())
@@ -800,6 +854,43 @@ class PAXView:
             
         except Exception as e:
             messagebox.showerror("Debug Failed", f"Error during debugging:\n{str(e)}")
+
+    def preserve_listbox_selection(self):
+        """
+        Store current listbox selection to prevent loss during updates.
+        """
+        return self.listbox.curselection()
+
+    def restore_listbox_selection(self, selection):
+        """
+        Restore a previously stored listbox selection.
+        """
+        if selection:
+            self.listbox.selection_clear(0, 'end')
+            for index in selection:
+                if index < self.listbox.size():  # Safety check
+                    self.listbox.selection_set(index)
+
+    def on_calibration_setting_change(self, event=None):
+        """
+        Handle calibration setting changes while preserving listbox selection.
+        """
+        # Store current selection
+        current_selection = self.preserve_listbox_selection()
+        
+        # Restore selection after a brief delay to allow any updates to complete
+        if current_selection:
+            self.root.after(50, lambda: self.restore_listbox_selection(current_selection))
+
+    #Temporary debug method to track listbox selection loss
+    #This can be removed once the issue is resolved
+    def debug_selection_loss(self, event_name="Unknown"):
+        """
+        Debug method to track when and why listbox selection is lost.
+        """
+        selection = self.listbox.curselection()
+        print(f"🔍 Debug - Event: {event_name}, Selection: {selection}")
+        return selection
 
 
 def create_modern_calibration_window(parent_window, gui_instance, constants_module):
