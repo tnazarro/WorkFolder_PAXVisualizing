@@ -11,6 +11,7 @@ import sys
 #This should import the constants from the constants.py file in the same directory, and anything else needed
 from constants import *
 # Import specific functions instead of * for better control
+# Honestly though, this is a bit of a mess, and could be cleaned up
 from data_processing import (
     load_multiple_files, 
     process_multiple_files_automatically, 
@@ -56,7 +57,7 @@ class PAXView:
         # self.df = pd.DataFrame()  # Initialize df to empty DataFrame; commented out to avoid confusion with the global df in constants.py
         
         
-        #===Legacy code for the top left frame===
+        #=============Legacy code for the top-left frame=============
         # self.analyze_button = tk.Button(self.frame_TL, text="Analyze PAX data", 
         #                                 command=lambda: pax_analyzer(self.file_path.get(), self.selected, self.listbox, self), 
         #                                 bg='light green')
@@ -110,7 +111,7 @@ class PAXView:
 
         self.sMR = ttk.Separator(self.frame_MR, orient='vertical').grid(column=1,rowspan=9,sticky="ns")
 
-        #Large section below to set up the calibration range selection, and the sliders for the I0 selection
+        #==========Large section below to set up the calibration range selection, and the sliders for the I0 selection==========
         self.calibvar = tk.StringVar()
         self.calibration_select = ttk.Combobox(self.frame_MR, textvariable=self.calibvar)
         self.calibration_select['values'] = ('Scattering','Absorbing','Neither')
@@ -244,6 +245,7 @@ class PAXView:
              text = "Translate Alarm", 
              command = lambda: alarm_translate(self.alarmTextbox.get(), alarm_names, self.log), bg = 'light blue')
         self.translateButton.grid(row = 12, column = 2)
+        # ==========End of the calibration region selection and I0 sliders==========
 
 
 
@@ -617,6 +619,7 @@ class PAXView:
         if messagebox.askyesno("Quit Dialog", "Are you sure you want to quit the app?"):
                   self.root.destroy()
 
+    #TODO: Figure out if this is needed, or if it is just a remnant of the old code
     def plot(self, df, x_column, y_column):
         fig = Figure(figsize=(5,5))
         ax = fig.add_subplot(111)
@@ -630,7 +633,7 @@ class PAXView:
         toolbar.update()
         toolbar.grid(row=1, column=0)
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(mdates.AutoDateLocator()))
-        #TODO: Figure out if this is needed, or if it is just a remnant of the old code
+        
     
     def mainloop(self):
         self.root.mainloop()

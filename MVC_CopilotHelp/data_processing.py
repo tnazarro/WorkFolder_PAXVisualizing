@@ -32,6 +32,7 @@ def load_multiple_files(selected, file_to_set, pb):
             title="Choose Multiple PAX Data Files", 
             filetypes=(("PAX Data", "*.xlsx"),)
         )
+    #Removed the V3 option as it is not supported in this context
     elif selected.get() == "V3":
         file_paths = filedialog.askopenfilenames(
             title="Choose Multiple PAX.txt Files", 
@@ -406,7 +407,7 @@ def calculate_extinction_coefficient(df, i0_low_idx, i0_high_idx,
         alt_names = [
             'Detected Laser Power (W)', 
             'Laser Power (W)',
-            'Laser power (W)'
+            'Laser power (W)' #annoyingly, caps mattering here 
         ]
         found_col = None
         for alt_name in alt_names:
@@ -439,6 +440,7 @@ def calculate_extinction_coefficient(df, i0_low_idx, i0_high_idx,
     intensity_ratio = np.maximum(current_power / baseline_power, epsilon)
     
     # Calculate extinction coefficient
+    #Of note, np.log is the natural logarithm 
     df[calculated_column_name] = -(1/.354) * np.log(intensity_ratio) * 1000000  # Convert to 1/Mm
     
     print(f"✅ Created extinction coefficient column: '{calculated_column_name}'")
@@ -888,6 +890,7 @@ def create_time_column_enhanced(df):
     
     time_series = None
     time_source = "unknown"
+    
     
     # Strategy 1: Try Excel serial date conversion
     try:
