@@ -2,7 +2,7 @@
 Pax Analyzer 3.0
 ====================
 
-(Current To-Do list/explanation): Add PADS style data slicer/Add ability to select regions of data to view
+(Current To-Do list): Add PADS style data slicer/Add ability to select regions of data to view
 
 
 Description

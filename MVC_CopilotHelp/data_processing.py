@@ -976,6 +976,10 @@ def fix_pax_data_time_issue(df):
 def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, mode='Scattering'):
     """
     Enhanced calibration analysis with comprehensive debugging and error handling.
+    
+    FIXED VERSION:
+    - X-axis data is now mode-dependent (Bscat for Scattering, Babs for Absorbing)
+    - Both percentage change and range filters now apply to X-axis data
     """
     
     print("🔍 Enhanced Calibration Analysis Starting...")
@@ -1042,13 +1046,30 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
         
         raise ValueError(error_msg)
     
-    # Step 3: Extract calibration region data
+    # Step 3: Extract calibration region data (FIXED - Mode-dependent X-axis)
     print(f"\n🎯 Step 3: Data Extraction")
     
     try:
         filtered_time = df['time'].iloc[xlocA:xlocB] if 'time' in df.columns else df.index[xlocA:xlocB]
-        filtered_dfx = df['Bscat (1/Mm)'].iloc[xlocA:xlocB]
         
+        # X-axis data depends on calibration mode (FIXED)
+        if mode == 'Scattering':
+            if 'Bscat (1/Mm)' not in df.columns:
+                error_msg = "Bscat (1/Mm) column not found for scattering mode"
+                debug_info['issues'].append(error_msg)
+                raise ValueError(error_msg)
+            filtered_dfx = df['Bscat (1/Mm)'].iloc[xlocA:xlocB]
+            x_column_name = 'Bscat (1/Mm)'
+        else:  # Absorbing mode
+            if 'Babs (1/Mm)' not in df.columns:
+                error_msg = "Babs (1/Mm) column not found for absorbing mode"
+                debug_info['issues'].append(error_msg)
+                debug_info['recommendations'].append("Ensure PAX data includes absorption measurements")
+                raise ValueError(error_msg)
+            filtered_dfx = df['Babs (1/Mm)'].iloc[xlocA:xlocB]
+            x_column_name = 'Babs (1/Mm)'
+        
+        # Y-axis data (unchanged logic)
         if mode == 'Scattering':
             filtered_dfy = df[ext_column].iloc[xlocA:xlocB]
             y_column_name = ext_column
@@ -1061,7 +1082,7 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
         debug_info['step_counts']['initial'] = initial_count
         
         print(f"✅ Extracted {initial_count} points")
-        print(f"X-data (Bscat) range: {filtered_dfx.min():.3f} to {filtered_dfx.max():.3f}")
+        print(f"X-data ({x_column_name}) range: {filtered_dfx.min():.3f} to {filtered_dfx.max():.3f}")
         print(f"Y-data ({y_column_name}) range: {filtered_dfy.min():.6f} to {filtered_dfy.max():.6f}")
         
         # Store data statistics
@@ -1079,13 +1100,13 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
         debug_info['issues'].append(error_msg)
         raise ValueError(error_msg)
     
-    # Step 4: Apply percentage change filter
-    print(f"\n📈 Step 4: Percentage Change Filter")
+    # Step 4: Apply percentage change filter to X-axis data (FIXED)
+    print(f"\n📈 Step 4: Percentage Change Filter (applied to {x_column_name})")
     
-    y_pct_change = filtered_dfy.pct_change() * 100
+    x_pct_change = filtered_dfx.pct_change() * 100  # FIXED: Now applied to X-axis
     
     # Handle the first NaN value from pct_change
-    mask_pct = (y_pct_change.abs() <= percent) | (y_pct_change.isna())
+    mask_pct = (x_pct_change.abs() <= percent) | (x_pct_change.isna())
     
     filtered_dfy_pct = filtered_dfy[mask_pct]
     filtered_dfx_pct = filtered_dfx[mask_pct]
@@ -1100,7 +1121,7 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
     
     if after_pct_count == 0:
         # Analyze percentage changes to give better recommendations
-        pct_changes_valid = y_pct_change.dropna()
+        pct_changes_valid = x_pct_change.dropna()  # FIXED: Reference X-axis changes
         if len(pct_changes_valid) > 0:
             max_pct = pct_changes_valid.abs().max()
             p95_pct = pct_changes_valid.abs().quantile(0.95)
@@ -1111,15 +1132,15 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
             debug_info['recommendations'].append(f"Recommended: {p95_pct:.1f}% (95th percentile)")
             
             print(f"❌ {error_msg}")
-            print(f"Max percentage change: {max_pct:.2f}%")
+            print(f"Max {x_column_name} percentage change: {max_pct:.2f}%")
             print(f"95th percentile: {p95_pct:.2f}%")
         
-        raise ValueError("No data points survived percentage change filter")
+        raise ValueError(f"No data points survived percentage change filter on {x_column_name}")
     
-    # Step 5: Apply range filter
-    print(f"\n📊 Step 5: Range Filter")
+    # Step 5: Apply range filter to X-axis data (FIXED - now consistent)
+    print(f"\n📊 Step 5: Range Filter (applied to {x_column_name})")
     
-    mask_range = (filtered_dfy_pct >= min_val) & (filtered_dfy_pct <= max_val)
+    mask_range = (filtered_dfx_pct >= min_val) & (filtered_dfx_pct <= max_val)
     
     filtered_dfx_final = filtered_dfx_pct[mask_range]
     filtered_dfy_final = filtered_dfy_pct[mask_range]
@@ -1133,10 +1154,10 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
     print(f"Points removed: {after_pct_count - final_count}")
     
     if final_count == 0:
-        data_min = filtered_dfy_pct.min()
-        data_max = filtered_dfy_pct.max()
+        data_min = filtered_dfx_pct.min()  # FIXED: Reference X-axis data
+        data_max = filtered_dfx_pct.max()  # FIXED: Reference X-axis data
         
-        error_msg = f"All points removed by range filter ({min_val} to {max_val})"
+        error_msg = f"All points removed by range filter ({min_val} to {max_val}) on {x_column_name}"
         debug_info['issues'].append(error_msg)
         
         # Provide specific recommendations based on data range
@@ -1148,9 +1169,9 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
             debug_info['recommendations'].append(f"Expand range to {data_min:.3f} to {data_max:.3f}")
         
         print(f"❌ {error_msg}")
-        print(f"Data actually ranges from {data_min:.6f} to {data_max:.6f}")
+        print(f"{x_column_name} data actually ranges from {data_min:.6f} to {data_max:.6f}")
         
-        raise ValueError("No data points survived range filter")
+        raise ValueError(f"No data points survived range filter on {x_column_name}")
     
     # Step 6: Final validation
     print(f"\n✅ Step 6: Final Results")
@@ -1171,13 +1192,13 @@ def enhanced_calibration_analysis(df, xlocA, xlocB, min_val, max_val, percent, m
         if abs(correlation) < 0.1:
             debug_info['issues'].append("Very low correlation between X and Y data")
     
-    # Return the filtered data
+    # Return the filtered data (UPDATED - now includes correct column names)
     filtered_data = {
         'x': filtered_dfx_final,
         'y': filtered_dfy_final,
         'time': filtered_time_final,
         'count': final_count,
-        'x_column': 'Bscat (1/Mm)',
+        'x_column': x_column_name,  # FIXED: Now reflects actual column used
         'y_column': y_column_name
     }
     

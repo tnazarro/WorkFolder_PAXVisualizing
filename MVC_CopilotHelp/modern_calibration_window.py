@@ -126,7 +126,7 @@ class ModernCalibrationWindow:
         
     def create_parameters_section_with_notes(self, parent=None):
         """
-        Enhanced parameters section with notes area.
+        Enhanced parameters section with clearer labeling (no tooltips).
         """
         if parent is None:
             parent = self.calib_window
@@ -146,54 +146,82 @@ class ModernCalibrationWindow:
         main_container.columnconfigure(0, weight=2)  # Parameters get more space
         main_container.columnconfigure(1, weight=1)  # Notes get less space
         
-        # LEFT SIDE: Parameters (existing functionality)
+        # LEFT SIDE: Parameters with enhanced labeling
         params_left_frame = tk.Frame(main_container)
         params_left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        
+        # Add explanation header
+        explanation_frame = tk.Frame(params_left_frame, bg="#e8f4fd", relief="ridge", bd=1)
+        explanation_frame.pack(fill="x", pady=(0, 10), padx=5)
+        
+        explanation_label = tk.Label(
+            explanation_frame,
+            text="ℹ️ Filters apply to X-axis data: Bscat (scattering) or Babs (absorbing)",
+            font=("Arial", 9, "italic"),
+            fg="#2980b9",
+            bg="#e8f4fd",
+            pady=8
+        )
+        explanation_label.pack()
         
         # Create parameter display in a grid
         params_grid = tk.Frame(params_left_frame)
         params_grid.pack(fill="x")
         
-        # Parameters from GUI (same as before)
-        self.create_parameter_display(params_grid, "Calibration Mode:", 
+        # Parameters from GUI with enhanced descriptions (no tooltips)
+        self.create_parameter_display_enhanced(params_grid, "Calibration Mode:", 
                                     lambda: self.gui.calibvar.get(), 0, 0)
-        self.create_parameter_display(params_grid, "Min Value:", 
-                                    lambda: self.gui.entry_min.get(), 0, 1)
-        self.create_parameter_display(params_grid, "Max Value:", 
-                                    lambda: self.gui.entry_max.get(), 0, 2)
-        self.create_parameter_display(params_grid, "% Change Limit:", 
+                                    
+        self.create_parameter_display_enhanced(params_grid, "Min X-Value:", 
+                                    lambda: f"{self.gui.entry_min.get()}", 0, 1)
+                                    
+        self.create_parameter_display_enhanced(params_grid, "Max X-Value:", 
+                                    lambda: f"{self.gui.entry_max.get()}", 0, 2)
+                                    
+        self.create_parameter_display_enhanced(params_grid, "X % Change Limit:", 
                                     lambda: f"{self.gui.entry_percent.get()}%", 0, 3)
         
         # Slider positions
-        self.create_parameter_display(params_grid, "Calib Start Index:", 
+        self.create_parameter_display_enhanced(params_grid, "Calib Start Index:", 
                                     lambda: f"{int(self.gui.current_valueCalibLow.get())}", 1, 0)
-        self.create_parameter_display(params_grid, "Calib End Index:", 
+                                    
+        self.create_parameter_display_enhanced(params_grid, "Calib End Index:", 
                                     lambda: f"{int(self.gui.current_valueCalibHigh.get())}", 1, 1)
         
         # Data info
-        self.create_parameter_display(params_grid, "Total Data Points:", 
+        self.create_parameter_display_enhanced(params_grid, "Total Data Points:", 
                                     lambda: f"{len(self.constants.df_main)}" if not self.constants.df_main.empty else "0", 1, 2)
-        self.create_parameter_display(params_grid, "Selected Range:", 
+                                    
+        self.create_parameter_display_enhanced(params_grid, "Selected Range:", 
                                     self.get_time_range_text, 1, 3)
         
-        # RIGHT SIDE: Notes section (NEW)
+        # RIGHT SIDE: Notes section (existing implementation)
         self.create_notes_section(main_container)
+
         
-    def create_parameter_display(self, parent, label_text, value_func, row, col):
-        """Create a parameter display widget"""
+    def create_parameter_display_enhanced(self, parent, label_text, value_func, row, col, description=None):
+        """
+        ENHANCED: Create a parameter display widget with tooltip descriptions.
+        """
         
         param_frame = tk.Frame(parent, relief="ridge", bd=1, padx=10, pady=8)
         param_frame.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
         
+        # Main label
         label = tk.Label(param_frame, text=label_text, font=("Arial", 9, "bold"), fg="#2c3e50")
         label.pack()
         
+        # Value display
         value_label = tk.Label(param_frame, text="--", font=("Arial", 10), fg="#3498db")
         value_label.pack()
         
+        # Add tooltip functionality if description provided
+        if description:
+            self.add_tooltip(param_frame, description)
+        
         # Store reference for updating
         setattr(self, f"param_{label_text.replace(':', '').replace(' ', '_').lower()}", 
-               {'func': value_func, 'label': value_label})
+            {'func': value_func, 'label': value_label})
         
     def get_time_range_text(self):
         """Get formatted time range text"""
@@ -306,9 +334,12 @@ class ModernCalibrationWindow:
         setattr(self, attr_name, value_label)
         
     def create_action_buttons(self, parent=None):
-        """Create action buttons at the bottom"""
+        """
+        Enhanced action buttons with mode-specific validation.
+        """
         if parent is None:
             parent = self.calib_window
+            
         button_frame = tk.Frame(parent, bg="#f8f9fa")
         button_frame.pack(fill="x", padx=10, pady=10)
         
@@ -316,7 +347,7 @@ class ModernCalibrationWindow:
         refresh_btn = tk.Button(
             button_frame,
             text="🔄 Refresh Analysis",
-            command=self.run_calibration_analysis,
+            command=self.run_calibration_analysis_with_validation,
             bg="#3498db",
             fg="white",
             font=("Arial", 11, "bold"),
@@ -325,6 +356,20 @@ class ModernCalibrationWindow:
             pady=10
         )
         refresh_btn.pack(side="left", padx=(0, 10))
+        
+        # Validate parameters button
+        validate_btn = tk.Button(
+            button_frame,
+            text="✓ Validate Parameters",
+            command=self.validate_parameters_interactive,
+            bg="#f39c12",
+            fg="white",
+            font=("Arial", 11, "bold"),
+            relief="flat",
+            padx=30,
+            pady=10
+        )
+        validate_btn.pack(side="left", padx=(0, 10))
         
         # Export results button
         export_btn = tk.Button(
@@ -403,6 +448,7 @@ class ModernCalibrationWindow:
             
             # Update status
             self.status_label.config(text="● Analysis Complete", fg="#27ae60")
+            self.update_results_section_with_column_info()
             
         except Exception as e:
             messagebox.showerror("Analysis Error", f"Error during analysis: {str(e)}")
@@ -421,12 +467,11 @@ class ModernCalibrationWindow:
             
     def analyze_scattering_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
         """
-        Ultimate enhanced scattering mode analysis with both automatic column creation 
-        and comprehensive debugging.
+        UPDATED: Enhanced scattering mode analysis with proper handling of new return values.
         """
         
         try:
-            # STEP 1: Handle missing extinction column (from extinction coefficient implementation)
+            # STEP 1: Handle missing extinction column (unchanged)
             if 'Debug Ext Calculation' in df.columns:
                 ext_column = 'Debug Ext Calculation'
                 print("📊 Using existing 'Debug Ext Calculation' column")
@@ -447,7 +492,7 @@ class ModernCalibrationWindow:
                     messagebox.showerror("Error", f"Could not determine extinction column: {str(e)}")
                     return
             
-            # STEP 2: Run enhanced analysis with debugging (from long-term solution)
+            # STEP 2: Run enhanced analysis with debugging
             filtered_data, debug_info = enhanced_calibration_analysis(
                 df, xlocA, xlocB, min_val, max_val, percent, mode='Scattering'
             )
@@ -456,6 +501,9 @@ class ModernCalibrationWindow:
             self.filtered_x = filtered_data['x']
             self.filtered_y = filtered_data['y'] 
             self.filtered_time = filtered_data['time']
+            # UPDATED: Store column names for proper labeling
+            self.x_column_name = filtered_data['x_column']
+            self.y_column_name = filtered_data['y_column']
             
             # STEP 4: Perform linear regression
             from scipy.stats import linregress
@@ -464,21 +512,22 @@ class ModernCalibrationWindow:
             )
             self.store_results(slope, intercept, r_value, p_value, std_err, filtered_data['count'])
             
-            # STEP 5: Create plots
+            # STEP 5: Create plots with proper labels (UPDATED)
             import seaborn as sns
             sns.regplot(x=filtered_data['x'], y=filtered_data['y'], ax=self.ax1, 
                     marker='x', line_kws=dict(color='red'), scatter_kws={'alpha': 0.6})
-            self.ax1.set_xlabel(filtered_data['x_column'])
-            self.ax1.set_ylabel(filtered_data['y_column'])
+            # UPDATED: Use dynamic column names from filtered_data
+            self.ax1.set_xlabel(self.x_column_name)
+            self.ax1.set_ylabel(self.y_column_name)
             self.ax1.set_title(f'Scattering Mode: {filtered_data["count"]} points')
             
-            # Time series plot
+            # Time series plot (UPDATED)
             self.ax2.scatter(filtered_data['time'], filtered_data['y'], alpha=0.6, color='blue')
             self.ax2.set_xlabel('Time')
-            self.ax2.set_ylabel(filtered_data['y_column'])
+            self.ax2.set_ylabel(self.y_column_name)  # UPDATED: Use stored column name
             self.ax2.set_title('Filtered Data Over Time')
             
-            # STEP 6: Show success message with debug info
+            # STEP 6: Show success message with debug info (unchanged)
             if debug_info['issues']:
                 warning_msg = f"Analysis completed with {len(debug_info['issues'])} warning(s):\n"
                 for issue in debug_info['issues'][:3]:  # Show first 3 issues
@@ -501,12 +550,11 @@ class ModernCalibrationWindow:
 
     def analyze_absorbing_mode(self, df, xlocA, xlocB, min_val, max_val, percent):
         """
-        Ultimate enhanced absorbing mode analysis with both automatic column creation 
-        and comprehensive debugging.
+        UPDATED: Enhanced absorbing mode analysis with proper handling of new return values.
         """
         
         try:
-            # STEP 1: Handle missing extinction column
+            # STEP 1: Handle missing extinction column (unchanged)
             if 'Debug Ext Calculation' in df.columns:
                 ext_column = 'Debug Ext Calculation'
                 print("📊 Using existing 'Debug Ext Calculation' column")
@@ -532,10 +580,13 @@ class ModernCalibrationWindow:
                 df, xlocA, xlocB, min_val, max_val, percent, mode='Absorbing'
             )
             
-            # STEP 3: Store results
+            # STEP 3: Store results (UPDATED)
             self.filtered_x = filtered_data['x']
             self.filtered_y = filtered_data['y']
             self.filtered_time = filtered_data['time']
+            # UPDATED: Store column names for proper labeling
+            self.x_column_name = filtered_data['x_column']
+            self.y_column_name = filtered_data['y_column']
             
             # STEP 4: Perform linear regression
             from scipy.stats import linregress
@@ -544,21 +595,22 @@ class ModernCalibrationWindow:
             )
             self.store_results(slope, intercept, r_value, p_value, std_err, filtered_data['count'])
             
-            # STEP 5: Create plots  
+            # STEP 5: Create plots with proper labels (UPDATED)
             import seaborn as sns
             sns.regplot(x=filtered_data['x'], y=filtered_data['y'], ax=self.ax1,
                     marker='x', line_kws=dict(color='red'), scatter_kws={'alpha': 0.6})
-            self.ax1.set_xlabel(filtered_data['x_column'])
-            self.ax1.set_ylabel(filtered_data['y_column'])
+            # UPDATED: Use dynamic column names from filtered_data
+            self.ax1.set_xlabel(self.x_column_name)
+            self.ax1.set_ylabel(self.y_column_name)
             self.ax1.set_title(f'Absorbing Mode: {filtered_data["count"]} points')
             
-            # Time series plot
+            # Time series plot (UPDATED)
             self.ax2.scatter(filtered_data['time'], filtered_data['y'], alpha=0.6, color='green')
             self.ax2.set_xlabel('Time')
-            self.ax2.set_ylabel(filtered_data['y_column'])
+            self.ax2.set_ylabel(self.y_column_name)  # UPDATED: Use stored column name
             self.ax2.set_title('Filtered Data Over Time')
             
-            # STEP 6: Show success message with debug info
+            # STEP 6: Show success message with debug info (unchanged)
             if debug_info['issues']:
                 warning_msg = f"Analysis completed with {len(debug_info['issues'])} warning(s):\n"
                 for issue in debug_info['issues'][:3]:
@@ -862,9 +914,10 @@ class ModernCalibrationWindow:
 
     def get_analysis_metadata(self):
         """
-        Get current analysis parameters as formatted text.
+        UPDATED: Get current analysis parameters as formatted text with correct column references.
         """
         try:
+            # Basic parameters (unchanged)
             metadata = f"""Mode: {self.gui.calibvar.get()}
     Min Value: {self.gui.entry_min.get()}
     Max Value: {self.gui.entry_max.get()}
@@ -874,7 +927,13 @@ class ModernCalibrationWindow:
     Total Data Points: {len(self.constants.df_main) if not self.constants.df_main.empty else 0}
     Time Range: {self.get_time_range_text()}"""
 
-            # Add results if available
+            # UPDATED: Add column information if available
+            if hasattr(self, 'x_column_name') and hasattr(self, 'y_column_name'):
+                metadata += f"""
+    X-axis Column: {self.x_column_name}
+    Y-axis Column: {self.y_column_name}"""
+
+            # Add results if available (unchanged)
             if hasattr(self, 'analysis_results') and self.analysis_results:
                 metadata += f"""
 
@@ -889,3 +948,192 @@ class ModernCalibrationWindow:
             
         except Exception as e:
             return f"Error generating metadata: {str(e)}"
+
+    # OPTIONAL: Update parameter display for better user guidance
+    def create_parameter_display_enhanced(self, parent, label_text, value_func, row, col, description=None):
+        """
+        ENHANCED: Create a parameter display widget with optional description tooltip.
+        """
+        
+        param_frame = tk.Frame(parent, relief="ridge", bd=1, padx=10, pady=8)
+        param_frame.grid(row=row, column=col, padx=5, pady=5, sticky="ew")
+        
+        label = tk.Label(param_frame, text=label_text, font=("Arial", 9, "bold"), fg="#2c3e50")
+        label.pack()
+        
+        value_label = tk.Label(param_frame, text="--", font=("Arial", 10), fg="#3498db")
+        value_label.pack()
+        
+        # OPTIONAL: Add description tooltip for clarification
+        if description:
+            def show_tooltip(event):
+                tooltip = tk.Toplevel()
+                tooltip.wm_overrideredirect(True)
+                tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+                label_tooltip = tk.Label(tooltip, text=description, 
+                                    background="lightyellow", relief="solid", borderwidth=1,
+                                    font=("Arial", 8))
+                label_tooltip.pack()
+                
+            def hide_tooltip(event):
+                for widget in param_frame.winfo_children():
+                    if isinstance(widget, tk.Toplevel):
+                        widget.destroy()
+                        
+            param_frame.bind("<Enter>", show_tooltip)
+            param_frame.bind("<Leave>", hide_tooltip)
+        
+        # Store reference for updating
+        setattr(self, f"param_{label_text.replace(':', '').replace(' ', '_').lower()}", 
+            {'func': value_func, 'label': value_label})
+        
+
+
+    def update_results_section_with_column_info(self):
+        """
+        Update results section to show which columns were analyzed.
+        """
+        # Add this method to show column information in results
+        if hasattr(self, 'x_column_name') and hasattr(self, 'y_column_name'):
+            # Create or update column info display
+            if not hasattr(self, 'column_info_label'):
+                # Find the results frame
+                results_frame = None
+                for child in self.calib_window.winfo_children():
+                    if isinstance(child, ttk.LabelFrame):
+                        try:
+                            if "Analysis Results" in str(child['text']):
+                                results_frame = child
+                                break
+                        except:
+                            continue
+                
+                if results_frame:
+                    # Add column information
+                    column_info_frame = tk.Frame(results_frame, relief="sunken", bd=1, bg="#f8f9fa")
+                    column_info_frame.pack(fill="x", pady=(5, 0))
+                    
+                    tk.Label(column_info_frame, text="Data Columns Used:", 
+                            font=("Arial", 10, "bold"), bg="#f8f9fa").pack(pady=(5, 2))
+                    
+                    self.column_info_label = tk.Label(
+                        column_info_frame,
+                        text=f"X: {self.x_column_name} | Y: {self.y_column_name}",
+                        font=("Courier New", 10),
+                        fg="#2c3e50",
+                        bg="#f8f9fa"
+                    )
+                    self.column_info_label.pack(pady=(0, 5))
+            else:
+                # Update existing label
+                self.column_info_label.config(text=f"X: {self.x_column_name} | Y: {self.y_column_name}")
+
+
+    def run_calibration_analysis_with_validation(self):
+        """
+        Run analysis with pre-validation and better error messages.
+        """
+        try:
+            # Pre-validate required columns exist
+            df = self.constants.df_main
+            if df.empty:
+                messagebox.showerror("Error", "No data loaded!")
+                return
+            
+            mode = self.gui.calibvar.get()
+            
+            # Check for required columns based on mode
+            if mode == 'Scattering':
+                if 'Bscat (1/Mm)' not in df.columns:
+                    messagebox.showerror("Missing Data", 
+                        "Scattering mode requires 'Bscat (1/Mm)' column.\n\n"
+                        "Available columns:\n" + "\n".join([f"• {col}" for col in df.columns[:10]]))
+                    return
+            elif mode == 'Absorbing':
+                if 'Babs (1/Mm)' not in df.columns:
+                    messagebox.showerror("Missing Data", 
+                        "Absorbing mode requires 'Babs (1/Mm)' column.\n\n"
+                        "Available columns:\n" + "\n".join([f"• {col}" for col in df.columns[:10]]))
+                    return
+            
+            # Update status and run original analysis
+            self.status_label.config(text="● Running Analysis...", fg="#f39c12")
+            self.calib_window.update()
+            
+            # Call the original analysis method
+            self.run_calibration_analysis()
+            
+            # Update column info display after successful analysis
+            self.update_results_section_with_column_info()
+            
+        except Exception as e:
+            messagebox.showerror("Analysis Error", f"Error during analysis: {str(e)}")
+            self.status_label.config(text="● Analysis Failed", fg="#e74c3c")
+
+    def validate_parameters_interactive(self):
+        """
+        Interactive parameter validation with suggestions.
+        """
+        try:
+            df = self.constants.df_main
+            if df.empty:
+                messagebox.showwarning("No Data", "Please load data first!")
+                return
+            
+            mode = self.gui.calibvar.get()
+            min_val = float(self.gui.entry_min.get()) if self.gui.entry_min.get() else 0
+            max_val = float(self.gui.entry_max.get()) if self.gui.entry_max.get() else 100
+            
+            # Get the appropriate column for the mode
+            if mode == 'Scattering':
+                if 'Bscat (1/Mm)' not in df.columns:
+                    messagebox.showerror("Error", "Bscat (1/Mm) column not found!")
+                    return
+                data_col = 'Bscat (1/Mm)'
+            elif mode == 'Absorbing':
+                if 'Babs (1/Mm)' not in df.columns:
+                    messagebox.showerror("Error", "Babs (1/Mm) column not found!")
+                    return
+                data_col = 'Babs (1/Mm)'
+            else:
+                messagebox.showerror("Error", "Please select a calibration mode!")
+                return
+            
+            # Analyze the data range
+            data_min = df[data_col].min()
+            data_max = df[data_col].max()
+            data_mean = df[data_col].mean()
+            data_std = df[data_col].std()
+            
+            # Build validation message
+            validation_msg = f"📊 Parameter Validation for {mode} Mode\n"
+            validation_msg += "=" * 50 + "\n\n"
+            validation_msg += f"Column: {data_col}\n"
+            validation_msg += f"Data range: {data_min:.3f} to {data_max:.3f}\n"
+            validation_msg += f"Mean: {data_mean:.3f} ± {data_std:.3f}\n\n"
+            
+            # Check filter settings
+            validation_msg += f"Current filter: {min_val} to {max_val}\n"
+            
+            if max_val < data_min:
+                validation_msg += "⚠️ WARNING: Max filter is below all data!\n"
+                validation_msg += f"💡 Suggestion: Set max to at least {data_min:.3f}\n"
+            elif min_val > data_max:
+                validation_msg += "⚠️ WARNING: Min filter is above all data!\n"
+                validation_msg += f"💡 Suggestion: Set min to at most {data_max:.3f}\n"
+            else:
+                # Calculate how much data would be kept
+                kept_data = df[(df[data_col] >= min_val) & (df[data_col] <= max_val)]
+                retention_pct = len(kept_data) / len(df) * 100
+                validation_msg += f"✅ Filter would retain {retention_pct:.1f}% of data\n"
+                
+                if retention_pct < 10:
+                    validation_msg += "⚠️ WARNING: Very restrictive filter!\n"
+                    validation_msg += f"💡 Suggestion: Consider expanding to {data_mean-2*data_std:.3f} - {data_mean+2*data_std:.3f}\n"
+            
+            messagebox.showinfo("Parameter Validation", validation_msg)
+            
+        except ValueError:
+            messagebox.showerror("Input Error", "Please ensure min/max values are valid numbers!")
+        except Exception as e:
+            messagebox.showerror("Validation Error", f"Error during validation: {str(e)}")
